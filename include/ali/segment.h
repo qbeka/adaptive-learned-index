@@ -24,8 +24,6 @@
 
 namespace ali {
 
-__extension__ using U128 = unsigned __int128;
-
 inline std::uint64_t multiply_high(std::uint64_t a, std::uint64_t b) {
   return static_cast<std::uint64_t>((static_cast<U128>(a) * b) >> 64);
 }

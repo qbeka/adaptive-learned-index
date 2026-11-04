@@ -12,6 +12,7 @@ namespace ali {
 
 using Key = std::uint64_t;
 using Value = std::uint64_t;  // The fixed-size payload. See docs/API.md.
+__extension__ using U128 = unsigned __int128;
 
 struct Entry {
   Key key;

@@ -36,8 +36,8 @@ class Rng {
   // Uniform in [0, bound). Uses the high word of a 128-bit product, which is
   // close enough to unbiased for workload generation. bound must be non-zero.
   std::uint64_t below(std::uint64_t bound) {
-    __extension__ using U128 = unsigned __int128;
-    return static_cast<std::uint64_t>((static_cast<U128>(next()) * bound) >> 64);
+    __extension__ using Wide = unsigned __int128;
+    return static_cast<std::uint64_t>((static_cast<Wide>(next()) * bound) >> 64);
   }
 
   // True with probability percent / 100.
