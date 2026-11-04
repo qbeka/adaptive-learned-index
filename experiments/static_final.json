@@ -1,0 +1,145 @@
+{
+  "name": "static_final",
+  "binary": "static_bench",
+  "max_load": 14,
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ],
+  "matrix": {
+    "dataset": [
+      "data/sosd/wiki_ts_200M_uint64",
+      "data/sosd/fb_200M_uint64",
+      "data/sosd/osm_cellids_200M_uint64"
+    ],
+    "stride": [
+      1
+    ],
+    "lookups": [
+      10000000
+    ],
+    "passes": [
+      2
+    ]
+  },
+  "indexes": [
+    {
+      "label": "binary",
+      "args": [
+        "--index",
+        "binary"
+      ]
+    },
+    {
+      "label": "ali_e8",
+      "args": [
+        "--index",
+        "ali",
+        "--epsilon",
+        "8"
+      ]
+    },
+    {
+      "label": "pgm_e8",
+      "args": [
+        "--index",
+        "pgm",
+        "--epsilon",
+        "8"
+      ]
+    },
+    {
+      "label": "ali_e16",
+      "args": [
+        "--index",
+        "ali",
+        "--epsilon",
+        "16"
+      ]
+    },
+    {
+      "label": "pgm_e16",
+      "args": [
+        "--index",
+        "pgm",
+        "--epsilon",
+        "16"
+      ]
+    },
+    {
+      "label": "ali_e32",
+      "args": [
+        "--index",
+        "ali",
+        "--epsilon",
+        "32"
+      ]
+    },
+    {
+      "label": "pgm_e32",
+      "args": [
+        "--index",
+        "pgm",
+        "--epsilon",
+        "32"
+      ]
+    },
+    {
+      "label": "ali_e64",
+      "args": [
+        "--index",
+        "ali",
+        "--epsilon",
+        "64"
+      ]
+    },
+    {
+      "label": "pgm_e64",
+      "args": [
+        "--index",
+        "pgm",
+        "--epsilon",
+        "64"
+      ]
+    },
+    {
+      "label": "ali_e256",
+      "args": [
+        "--index",
+        "ali",
+        "--epsilon",
+        "256"
+      ]
+    },
+    {
+      "label": "pgm_e256",
+      "args": [
+        "--index",
+        "pgm",
+        "--epsilon",
+        "256"
+      ]
+    },
+    {
+      "label": "ali_e1024",
+      "args": [
+        "--index",
+        "ali",
+        "--epsilon",
+        "1024"
+      ]
+    },
+    {
+      "label": "pgm_e1024",
+      "args": [
+        "--index",
+        "pgm",
+        "--epsilon",
+        "1024"
+      ]
+    }
+  ]
+}

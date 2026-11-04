@@ -1,0 +1,93 @@
+# Experiment plan
+
+Written before any validation result was read. Changes after the freeze go in a
+new spec and are stated in the report.
+
+## Question
+
+When does a local rebuild pay for itself? Specifically: does a policy that
+estimates the work a buffer will cause, from observed reads, writes and costs,
+beat the best single fixed rebuild threshold?
+
+## Data split
+
+| Split | Data | Seeds | Use |
+|---|---|---|---|
+| Validation | `wiki_ts`, stride 8 | 1, 2, 3 | Tuning only |
+| Test, primary | `wiki_ts`, stride 1 | 101 to 108 | Final claims |
+| Test, hostile | `osm_cellids_200M`, stride 4 | 101 to 108 | The dataset where a linear model fits worst |
+| Test, warm | `wiki_ts`, stride 2048 | 101 to 108 | Data fits in the 16 MiB L2 cache |
+
+Test data shares its source with validation, but test seeds choose different
+bulk, pool and absent keys and different operations. Test results are not read
+until the configuration below is frozen.
+
+## Tuning, with equal effort
+
+| Policy | Grid | Configurations |
+|---|---|---|
+| Fixed | threshold in 16, 64, 256, 1024, 2048, 4095, epsilon in 8, 16, 32 | 18 |
+| Adaptive | margin in 0, 1, 4, half-life in 2^18, 2^22, epsilon in 8, 16, 32 | 18 |
+| B+ tree | 16, 64, 256 leaf slots | 3 |
+| ALEX | Default parameters | 1 |
+
+Both learned policies use a leaf cap of 2^14 keys, a delta cap of 4096 keys and
+tail sealing, none of which are tuned.
+
+**Selection rule.** For each policy, pick the one configuration with the highest
+geometric mean throughput across the four workloads and three seeds. One
+configuration per policy, for all workloads. Tuning a fixed threshold per
+workload would need the knowledge an online policy is meant to replace.
+
+## Workloads
+
+Defined in `bench/workload.h`: `read_heavy`, `write_heavy`, `append_only`,
+`shifting_hotspot`. All include misses, and all run as bursts.
+
+## Hypotheses
+
+| Name | Statement |
+|---|---|
+| H1, primary | On `shifting_hotspot` on the primary test data, adaptive throughput exceeds fixed. |
+| H2 | Across all four workloads, the geometric mean throughput of adaptive exceeds fixed, and adaptive is at least 95 percent of fixed on every workload. |
+| H3 | Adaptive moves fewer bytes in rebuilds than fixed, on every workload. |
+
+## Decision rule
+
+The unit of replication is one seed: one trace, replayed by one fresh process per
+index. Comparisons are paired by seed.
+
+- H1 holds if the 95 percent bootstrap interval of the paired throughput ratio,
+  adaptive over fixed, lies above 1.0.
+- H2 holds if the same interval for the per-seed geometric mean lies above 1.0, and
+  every workload's interval reaches 0.95 or above.
+- H3 is descriptive and uses the median bytes moved.
+- Memory must not be worse by more than 5 percent, measured in final bytes per key.
+  If it is, a win does not count.
+
+The claim holds only if H1 and H2 both hold. Otherwise the report states a negative
+or mixed result.
+
+## Metrics
+
+Construction time, operations per second, read and write p50 and p99, bytes per
+key at allocator capacity, rebuild count, keys merged, bytes moved, rebuild time,
+worst observed pause, throughput through the distribution shift.
+
+Throughput, latency and memory are separate runs, because per-operation clocks and
+allocation tracking disturb timing. Work counters come from a separate
+instrumented binary and are never timed.
+
+## Timing limits
+
+`steady_clock` ticks at 24 MHz on this hardware, so single-operation latencies are
+quantized to 41.7 ns and include clock overhead. Percentiles are reported as
+measured with that stated. Throughput is not affected.
+
+macOS has no public thread affinity API, so runs request the highest
+quality-of-service class instead.
+
+## Quiet machine rule
+
+A process starts only when the 1-minute load average is below the spec's
+`max_load`. Load before and after each process is stored.

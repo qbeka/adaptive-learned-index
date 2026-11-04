@@ -11,7 +11,7 @@ The research question: **when does a local rebuild pay for itself?** Results are
 | **What it does** | Bulk load, lookup, lower bound, insert-or-assign, half-open range scan, over `uint64_t` keys with an 8-byte payload. |
 | **What it guarantees** | A wrong model costs time and can never change an answer. Every result is verified against its real neighbours. |
 | **What it is not** | A production database. It is single-threaded and in-memory, and it has no delete. |
-| **What you need** | macOS or Linux, clang with C++20, Make, Git, and Python 3 with NumPy for the analysis. No other dependency. |
+| **What you need** | A Mac with clang and C++20, Make, Git, and Python 3 with NumPy for the analysis. Tested on macOS arm64 only. |
 | **Baselines compared** | Sorted array, [PGM-index](https://pgm.di.unipi.it/), [ALEX](https://github.com/microsoft/ALEX), [tlx B+ tree](https://github.com/tlx/tlx), on [SOSD](https://github.com/learnedsystems/SOSD) data. |
 
 ## Quickstart
