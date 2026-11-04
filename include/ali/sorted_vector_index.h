@@ -4,10 +4,6 @@
 // competitor: lookups are O(log n) with a branchless search, inserts are O(n).
 #pragma once
 
-#include <span>
-#include <stdexcept>
-#include <vector>
-
 #include "ali/types.h"
 
 namespace ali {
@@ -17,18 +13,7 @@ class SortedVectorIndex {
   void bulk_load(std::span<const Entry> entries) {
     std::vector<Key> keys;
     std::vector<Value> values;
-    keys.reserve(entries.size());
-    values.reserve(entries.size());
-    for (const Entry& entry : entries) {
-      if (keys.empty() || entry.key > keys.back()) {
-        keys.push_back(entry.key);
-        values.push_back(entry.value);
-      } else if (entry.key == keys.back()) {
-        values.back() = entry.value;  // Duplicate: the last one wins.
-      } else {
-        throw std::invalid_argument("bulk_load: keys are not sorted");
-      }
-    }
+    split_sorted_entries(entries, keys, values);
     keys_ = std::move(keys);
     values_ = std::move(values);
   }

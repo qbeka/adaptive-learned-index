@@ -4,6 +4,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <span>
+#include <stdexcept>
+#include <vector>
 
 namespace ali {
 
@@ -39,6 +42,27 @@ inline std::size_t branchless_lower_bound(const Key* keys, std::size_t n,
     len -= half;
   }
   return lo + static_cast<std::size_t>(len == 1 && keys[lo] < key);
+}
+
+// Splits sorted entries into parallel arrays and applies the duplicate rule:
+// the last of a run of equal keys wins. Throws if the keys are out of order.
+inline void split_sorted_entries(std::span<const Entry> entries,
+                                 std::vector<Key>& keys,
+                                 std::vector<Value>& values) {
+  keys.clear();
+  values.clear();
+  keys.reserve(entries.size());
+  values.reserve(entries.size());
+  for (const Entry& entry : entries) {
+    if (keys.empty() || entry.key > keys.back()) {
+      keys.push_back(entry.key);
+      values.push_back(entry.value);
+    } else if (entry.key == keys.back()) {
+      values.back() = entry.value;
+    } else {
+      throw std::invalid_argument("bulk_load: keys are not sorted");
+    }
+  }
 }
 
 }  // namespace ali

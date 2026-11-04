@@ -2,6 +2,7 @@
 #pragma once
 
 #include <optional>
+#include <stdexcept>
 
 #include "ali/trace.h"
 #include "ali/types.h"
@@ -34,7 +35,11 @@ OpResult apply_op(Index& index, const Op& op) {
       return entry ? OpResult{1, entry->key, entry->value} : OpResult{};
     }
     case OpKind::kInsertOrAssign:
-      return {index.insert_or_assign(op.key, op.arg) ? 1U : 0U, 0, 0};
+      if constexpr (requires { index.insert_or_assign(op.key, op.arg); }) {
+        return {index.insert_or_assign(op.key, op.arg) ? 1U : 0U, 0, 0};
+      } else {
+        throw std::logic_error("read-only index given a write");
+      }
     case OpKind::kRank:
       return {1, index.rank(op.key), 0};
     case OpKind::kScan:
