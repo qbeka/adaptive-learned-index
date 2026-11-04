@@ -147,13 +147,20 @@ hit does not touch it. Costs come from the machine: merge cost from timing real
 rebuilds, step cost from timing one delta read in 256, shift cost from timing
 `memmove` once at startup.
 
-**Why one burst cannot cause repeated rebuilds:**
+**What stops an unusual burst from causing wasteful rebuilds:**
 
 1. A leaf needs `min_samples` operations before any decision.
 2. The margin requires savings to clearly exceed the cost.
 3. A rebuild clears the leaf's counters, so the next one is earned from zero.
 4. Counters halve every `2^half_life_log2` buffered operations, so old activity
    stops counting as recent.
+
+This bounds work, not the number of rebuilds. Total merge cost stays below the
+estimated savings, but the count can grow with the burst: the independent review
+measured 8 rebuilds from one 4,092-key write burst into small leaves, and 519
+from a 400,000-operation burst. A read-only burst gave 1. Rebuilds forced by the
+delta cap are outside the bound. An earlier version of this note said one burst
+cannot cause repeated rebuilds, which was false as worded.
 
 ## Failed experiments and corrections
 
@@ -183,6 +190,26 @@ rebuilds, step cost from timing one delta read in 256, shift cost from timing
    initializer-list assignment, which keeps capacity. Memory rose by 5 bytes per
    key at every threshold, equal to 16 bytes times every appended key. The index's
    own size report could not show this. The allocator-level counter did.
+
+7. **Truncated error bounds.** The independent review found that an epsilon above
+   2^33 could overflow the 32-bit `over` field, so the stored window was too small.
+   Answers stayed correct, because the neighbour check widened the search, but the
+   claim that widening never happens was false there. Epsilon and segment length
+   are now clamped so that both bounds fit.
+
+## Independent review
+
+A separate agent reviewed commit `9d6ba6d` against written acceptance criteria,
+working from its own clone.
+
+- **Fuzzing:** 4,000 seeds at `-O2` and 400 under sanitizers, 957k rebuilds,
+  749k splits, no result mismatch.
+- **Mutations:** 22 of 26 were caught. Two survivors were equivalent. Two exposed
+  real test gaps: counter decay was untested, and `bulk_load` rollback was not
+  checked on `StaticIndex` or `DynamicIndex`. Both now have tests.
+- **Fixed:** the truncation above, a use-after-free when a `scan` visitor calls back
+  into the index, now a documented contract rule, undefined behaviour for a
+  half-life of 2^64 or more, and the false hysteresis claim above.
 
 ## Retained optimizations
 

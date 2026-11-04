@@ -52,6 +52,10 @@ range with a bounded `hi` cannot include `UINT64_MAX`, so a `Range` with no `hi`
 is the way to reach it. `lower_bound(UINT64_MAX)` returns that key if stored and
 nothing otherwise.
 
+**Re-entrancy.** A `scan` visitor must not call any operation on the same
+index. On the dynamic index a read can trigger a rebuild, which frees the leaf the
+scan is walking. Collect entries and act on them after `scan` returns.
+
 **Numeric safety.** No code path may convert a raw key to floating point.
 Doubles have 53 bits of mantissa, so adjacent keys near `UINT64_MAX` would become
 equal. Models work on integer offsets from a segment's first key.
