@@ -69,6 +69,16 @@ struct WorkCounters {
   std::uint64_t delta_shifted = 0;  // Entries moved by delta inserts.
 };
 
+// The most recent rebuild, for tests and the website recording.
+struct RebuildEvent {
+  std::size_t base_keys = 0;
+  std::size_t delta_keys = 0;
+  std::size_t new_leaves = 0;
+  bool sealed = false;
+  double expected_saving_ns = 0;  // Zero for a policy that does not estimate.
+  double merge_cost_ns = 0;
+};
+
 // What one lookup did, for tests and the website recording.
 struct LookupTrace {
   std::size_t leaf = 0;
@@ -213,6 +223,7 @@ class DynamicIndex {
   std::size_t size() const { return size_; }
   std::size_t leaf_count() const { return leaves_.size(); }
   const RebuildStats& stats() const { return stats_; }
+  const RebuildEvent& last_rebuild() const { return last_rebuild_; }
   const WorkCounters& work() const { return work_; }
   std::uint64_t widened_searches() const { return widened_; }
   const Policy& policy() const { return policy_; }
@@ -428,6 +439,12 @@ class DynamicIndex {
   void rebuild(std::size_t index) {
     const auto start = std::chrono::steady_clock::now();
     Leaf& old_leaf = *leaves_[index];
+    last_rebuild_ = {old_leaf.keys.size(), old_leaf.delta.size(), 1, false, 0, 0};
+    if constexpr (requires { policy_.merge_cost_ns(view(old_leaf)); }) {
+      last_rebuild_.expected_saving_ns =
+          policy_.expected_saving_ns(old_leaf.state, view(old_leaf));
+      last_rebuild_.merge_cost_ns = policy_.merge_cost_ns(view(old_leaf));
+    }
     if (config_.seal_tail_appends && !old_leaf.keys.empty() &&
         old_leaf.delta.front().key > old_leaf.keys.back()) {
       seal_tail(index, start);
@@ -455,6 +472,7 @@ class DynamicIndex {
     std::vector<Key> fresh_first_keys;
     append_fitted_leaves(keys, values, fresh, fresh_first_keys);
 
+    last_rebuild_.new_leaves = fresh.size();
     const std::size_t tail = leaves_.size() - index - 1;
     const std::size_t extra = fresh.size() - 1;
     leaves_[index] = std::move(fresh.front());
@@ -499,6 +517,8 @@ class DynamicIndex {
     append_fitted_leaves(keys, values, fresh, fresh_first_keys);
 
     const std::size_t tail = leaves_.size() - index - 1;
+    last_rebuild_.sealed = true;
+    last_rebuild_.new_leaves = fresh.size();
     std::vector<Entry>().swap(leaf.delta);  // Assigning {} would keep the capacity.
     policy_.reset(leaf.state);
     const auto after = static_cast<std::ptrdiff_t>(index) + 1;
@@ -527,6 +547,7 @@ class DynamicIndex {
   std::vector<std::unique_ptr<Leaf>> leaves_;
   std::size_t size_ = 0;
   RebuildStats stats_;
+  RebuildEvent last_rebuild_;
   WorkCounters work_;
   std::uint64_t widened_ = 0;
 };
