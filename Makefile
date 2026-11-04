@@ -19,7 +19,7 @@ BENCH_BINS := $(patsubst bench/%.cpp,$(BUILD)/%,$(wildcard bench/*.cpp)) $(BUILD
 # Baselines are third-party code, so they are -isystem to keep our warnings ours.
 BASELINE_INCLUDES := -Ibench -isystem third_party/PGM-index/include -isystem third_party/tlx -isystem third_party/ALEX-arm64 -isystem third_party/ALEX-arm64/src/core
 
-.PHONY: all test tools bench sanitize smoke clean help
+.PHONY: all test tools bench sanitize smoke coverage mutation clean help
 
 all: tools $(TEST_BINS)
 
@@ -37,6 +37,12 @@ sanitize:
 smoke:
 	./scripts/smoke.sh
 
+coverage:
+	./scripts/coverage.sh
+
+mutation:
+	./scripts/mutation_test.py
+
 clean:
 	rm -rf build
 
@@ -44,6 +50,8 @@ help:
 	@echo "make test      build and run the correctness suite"
 	@echo "make sanitize  run the suite under ASan, then UBSan"
 	@echo "make smoke     one-command end-to-end check"
+	@echo "make coverage  measure test coverage of the library"
+	@echo "make mutation  check that the tests catch deliberate bugs"
 	@echo "make clean     remove build output"
 
 $(BUILD)/test_%: tests/test_%.cpp

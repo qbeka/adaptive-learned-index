@@ -1,0 +1,229 @@
+{
+  "lines_percent": 98.26,
+  "functions_percent": 96.09,
+  "regions_percent": 96.42,
+  "branches_percent": 93.07,
+  "lines": 1037,
+  "files": {
+    "dynamic_index.h": {
+      "lines": {
+        "covered": 353,
+        "count": 359,
+        "percent": 98.33
+      },
+      "functions": {
+        "covered": 28,
+        "count": 29,
+        "percent": 96.55
+      },
+      "regions": {
+        "covered": 222,
+        "count": 234,
+        "percent": 94.87
+      },
+      "branches": {
+        "covered": 165,
+        "count": 178,
+        "percent": 92.7
+      }
+    },
+    "map_oracle.h": {
+      "lines": {
+        "covered": 36,
+        "count": 36,
+        "percent": 100
+      },
+      "functions": {
+        "covered": 7,
+        "count": 7,
+        "percent": 100
+      },
+      "regions": {
+        "covered": 25,
+        "count": 25,
+        "percent": 100
+      },
+      "branches": {
+        "covered": 16,
+        "count": 16,
+        "percent": 100
+      }
+    },
+    "policy.h": {
+      "lines": {
+        "covered": 98,
+        "count": 102,
+        "percent": 96.08
+      },
+      "functions": {
+        "covered": 24,
+        "count": 28,
+        "percent": 85.71
+      },
+      "regions": {
+        "covered": 54,
+        "count": 58,
+        "percent": 93.1
+      },
+      "branches": {
+        "covered": 22,
+        "count": 24,
+        "percent": 91.67
+      }
+    },
+    "replay.h": {
+      "lines": {
+        "covered": 57,
+        "count": 63,
+        "percent": 90.48
+      },
+      "functions": {
+        "covered": 6,
+        "count": 6,
+        "percent": 100
+      },
+      "regions": {
+        "covered": 38,
+        "count": 41,
+        "percent": 92.68
+      },
+      "branches": {
+        "covered": 31,
+        "count": 35,
+        "percent": 88.57
+      }
+    },
+    "rng.h": {
+      "lines": {
+        "covered": 28,
+        "count": 28,
+        "percent": 100
+      },
+      "functions": {
+        "covered": 6,
+        "count": 6,
+        "percent": 100
+      },
+      "regions": {
+        "covered": 7,
+        "count": 7,
+        "percent": 100
+      },
+      "branches": {
+        "covered": 2,
+        "count": 2,
+        "percent": 100
+      }
+    },
+    "segment.h": {
+      "lines": {
+        "covered": 85,
+        "count": 85,
+        "percent": 100
+      },
+      "functions": {
+        "covered": 6,
+        "count": 6,
+        "percent": 100
+      },
+      "regions": {
+        "covered": 69,
+        "count": 69,
+        "percent": 100
+      },
+      "branches": {
+        "covered": 53,
+        "count": 54,
+        "percent": 98.15
+      }
+    },
+    "sorted_vector_index.h": {
+      "lines": {
+        "covered": 41,
+        "count": 41,
+        "percent": 100
+      },
+      "functions": {
+        "covered": 8,
+        "count": 8,
+        "percent": 100
+      },
+      "regions": {
+        "covered": 26,
+        "count": 26,
+        "percent": 100
+      },
+      "branches": {
+        "covered": 14,
+        "count": 14,
+        "percent": 100
+      }
+    },
+    "static_index.h": {
+      "lines": {
+        "covered": 93,
+        "count": 93,
+        "percent": 100
+      },
+      "functions": {
+        "covered": 16,
+        "count": 16,
+        "percent": 100
+      },
+      "regions": {
+        "covered": 48,
+        "count": 48,
+        "percent": 100
+      },
+      "branches": {
+        "covered": 26,
+        "count": 26,
+        "percent": 100
+      }
+    },
+    "trace.h": {
+      "lines": {
+        "covered": 200,
+        "count": 202,
+        "percent": 99.01
+      },
+      "functions": {
+        "covered": 18,
+        "count": 18,
+        "percent": 100
+      },
+      "regions": {
+        "covered": 134,
+        "count": 139,
+        "percent": 96.4
+      },
+      "branches": {
+        "covered": 120,
+        "count": 134,
+        "percent": 89.55
+      }
+    },
+    "types.h": {
+      "lines": {
+        "covered": 28,
+        "count": 28,
+        "percent": 100
+      },
+      "functions": {
+        "covered": 4,
+        "count": 4,
+        "percent": 100
+      },
+      "regions": {
+        "covered": 23,
+        "count": 23,
+        "percent": 100
+      },
+      "branches": {
+        "covered": 21,
+        "count": 22,
+        "percent": 95.45
+      }
+    }
+  }
+}

@@ -124,6 +124,19 @@ void check_huge_epsilon_cannot_truncate_the_error_bound() {
   CHECK(index.widened_searches() == 0);
 }
 
+void check_memory_report_adds_up() {
+  const std::vector<Entry> entries = ascending(0, 3, 1000);
+  StaticIndex index({0, 100});
+  index.bulk_load(entries);
+  const MemoryReport report = index.memory();
+  CHECK(report.keys == 1000 * sizeof(Key));
+  CHECK(report.payloads == 1000 * sizeof(Value));
+  CHECK(report.directory == index.segment_count() * sizeof(Key));
+  CHECK(report.models > 0);
+  CHECK(report.deltas == 0);
+  CHECK(report.capacity >= report.total_used());
+}
+
 void check_rejected_load_keeps_contents() {
   StaticIndex index;
   const std::vector<Entry> good = {{1, 10}, {2, 20}};
@@ -216,6 +229,7 @@ int main() {
   check_widen_finds_every_position();
   check_huge_epsilon_cannot_truncate_the_error_bound();
   check_rejected_load_keeps_contents();
+  check_memory_report_adds_up();
   check_traces_match_the_oracle();
   check_corrupted_bounds_never_change_an_answer();
   return 0;

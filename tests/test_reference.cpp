@@ -1,6 +1,8 @@
 // Checks the sorted-vector reference against the contract and the oracle.
+#include <cstdio>
 #include <limits>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "ali/map_oracle.h"
@@ -122,6 +124,46 @@ void check_trace_generation_is_deterministic() {
   CHECK(replay_digest(first, a) == replay_digest(second, b));
 }
 
+void check_trace_files_round_trip() {
+  TraceConfig config;
+  config.seed = 3;
+  config.bulk_keys = 200;
+  config.ops = 500;
+  config.space = KeySpace::kClustered;
+  const Trace trace = generate_trace(config);
+  const std::string path = "build/test_trace_round_trip.bin";
+  write_trace(trace, path);
+  const Trace loaded = read_trace(path);
+  CHECK(loaded.seed == trace.seed);
+  CHECK(loaded.bulk == trace.bulk);
+  CHECK(loaded.ops.size() == trace.ops.size());
+  SortedVectorIndex first;
+  SortedVectorIndex second;
+  CHECK(replay_digest(first, trace) == replay_digest(second, loaded));
+  std::remove(path.c_str());
+
+  bool threw = false;
+  try {
+    read_trace("build/no_such_trace.bin");
+  } catch (const std::runtime_error&) {
+    threw = true;
+  }
+  CHECK(threw);
+}
+
+void check_key_space_names_round_trip() {
+  for (KeySpace space : kAllKeySpaces) {
+    CHECK(key_space_from_string(to_string(space)) == space);
+  }
+  bool threw = false;
+  try {
+    key_space_from_string("nonsense");
+  } catch (const std::invalid_argument&) {
+    threw = true;
+  }
+  CHECK(threw);
+}
+
 void check_seeded_traces_match_the_oracle() {
   std::size_t traces = 0;
   std::size_t ops = 0;
@@ -153,6 +195,8 @@ int main() {
   check_contract<SortedVectorIndex>();
   check_differential_catches_a_bug();
   check_trace_generation_is_deterministic();
+  check_trace_files_round_trip();
+  check_key_space_names_round_trip();
   check_seeded_traces_match_the_oracle();
   return 0;
 }
