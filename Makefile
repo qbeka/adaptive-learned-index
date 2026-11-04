@@ -14,7 +14,7 @@ CXXFLAGS := $(CXXFLAGS_BASE) $(CXXFLAGS_$(MODE))
 TEST_SOURCES := $(wildcard tests/test_*.cpp)
 TEST_BINS := $(patsubst tests/%.cpp,$(BUILD)/%,$(TEST_SOURCES))
 TOOL_BINS := $(patsubst tools/%.cpp,$(BUILD)/%,$(wildcard tools/*.cpp))
-BENCH_BINS := $(patsubst bench/%.cpp,$(BUILD)/%,$(wildcard bench/*.cpp))
+BENCH_BINS := $(patsubst bench/%.cpp,$(BUILD)/%,$(wildcard bench/*.cpp)) $(BUILD)/update_bench_instrumented
 
 # Baselines are third-party code, so they are -isystem to keep our warnings ours.
 BASELINE_INCLUDES := -Ibench -isystem third_party/PGM-index/include -isystem third_party/tlx -isystem third_party/ALEX-arm64 -isystem third_party/ALEX-arm64/src/core
@@ -57,5 +57,10 @@ $(BUILD)/%: tools/%.cpp
 $(BUILD)/%: bench/%.cpp
 	@mkdir -p $(BUILD)
 	$(CXX) $(CXXFLAGS) $(BASELINE_INCLUDES) $< -o $@
+
+# The same benchmark with work counters on. It is never used for timing.
+$(BUILD)/update_bench_instrumented: bench/update_bench.cpp
+	@mkdir -p $(BUILD)
+	$(CXX) $(CXXFLAGS) -DALI_INSTRUMENT=1 $(BASELINE_INCLUDES) $< -o $@
 
 -include $(wildcard $(BUILD)/*.d)
