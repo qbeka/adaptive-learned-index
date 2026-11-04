@@ -3,138 +3,202 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Learned index replay</title>
+<title>Adaptive learned index</title>
+<meta name="description" content="A C++20 ordered index that predicts where a key is, corrects itself, and measures when a rebuild pays for itself.">
 <style>
 :root {
   color-scheme: light;
-  --surface: #fcfcfb;
-  --tile: #f6f3ef;
+  --page: #fbf8f4;
+  --card: #ffffff;
   --ink: #111511;
   --body: #444944;
   --muted: #5a5e5a;
-  --line: #1115111f;
-  --line-strong: #1115114d;
-  --series-1: #2a78d6;
-  --series-2: #eb6834;
-  --series-3: #1baf7a;
-}
-@media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme="light"])) {
-    color-scheme: dark;
-    --surface: #1a1a19;
-    --tile: #232321;
-    --ink: #f0efec;
-    --body: #c3c2b7;
-    --muted: #a3a29a;
-    --line: #f0efec24;
-    --line-strong: #f0efec55;
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --series-3: #199e70;
-  }
+  --quiet: #8d918e;
+  --forest: #1d3a2a;
+  --line: #11151117;
+  --line-strong: #1115112e;
+  --tile: #6040200e;
+  --tile-2: #60402017;
 }
 * { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 body {
   margin: 0;
-  background: var(--surface);
+  background: var(--page);
   color: var(--body);
-  font: 16px/24px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font: 16px/24px -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
-main { max-width: 860px; margin: 0 auto; padding: 48px 16px 64px; }
-h1 { color: var(--ink); font-size: 28px; line-height: 34px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.01em; }
-p { margin: 0 0 12px; }
-.lede { max-width: 640px; }
-.panel { background: var(--tile); border-radius: 18px; padding: 16px; margin-top: 20px; }
-.status { min-height: 104px; }
+::selection { background: #1d3a2a26; }
+#ridge { position: absolute; top: 0; left: 0; width: 100%; height: 220px; pointer-events: none; }
+.ridge-line { fill: none; stroke: rgb(29 58 42 / 0.32); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.page { position: relative; max-width: 720px; margin: 0 auto; padding: 196px 24px 80px; }
+h1 { margin: 0; color: var(--ink); font-size: clamp(2.5rem, 1.8rem + 3vw, 3.5rem); line-height: 1.02; font-weight: 400; letter-spacing: -0.03em; }
+.subtitle { margin: 14px 0 0; max-width: 34rem; font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem); line-height: 1.5; }
+.pills { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+.pill, button {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 20px;
+  border-radius: 999px; border: 1px solid var(--line-strong); background: var(--card); color: var(--ink);
+  font: inherit; font-size: 15px; font-weight: 600; text-decoration: none; cursor: pointer; transition: border-color 0.15s;
+}
+.pill[hidden] { display: none; }
+.pill:hover, button:hover { border-color: var(--ink); }
+.pill.dark, button.dark { background: #121412; border-color: #ffffff26; color: #fff; }
+.pill.dark:hover, button.dark:hover { background: var(--forest); }
+:focus-visible { outline: 2px solid var(--forest); outline-offset: 3px; border-radius: 6px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 40px; }
+.stat { background: var(--tile); border-radius: 18px; padding: 14px 16px; }
+.stat-value { color: var(--ink); font-size: 1.5rem; line-height: 1; font-weight: 600; letter-spacing: -0.028em; font-variant-numeric: tabular-nums; }
+.stat-label { margin-top: 6px; font-size: 13px; line-height: 18px; color: var(--muted); }
+section { margin-top: 80px; }
+h2 { margin: 0 0 24px; color: var(--ink); font-size: 1.5rem; line-height: 1.15; font-weight: 600; letter-spacing: -0.028em; }
+section > p { font-size: 15.5px; line-height: 1.65; margin: 0 0 16px; }
+.dashes { list-style: none; margin: 16px 0 0; padding: 0; }
+.dashes li { display: flex; gap: 12px; font-size: 15.5px; line-height: 1.6; margin-top: 8px; }
+.dashes li::before { content: ""; flex: none; width: 12px; height: 1px; margin-top: 0.8em; background: var(--quiet); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 28px; padding: 24px; }
 .step-label { font-size: 13px; line-height: 18px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.step-title { color: var(--ink); font-size: 18px; line-height: 26px; font-weight: 600; margin: 2px 0 4px; }
-.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; line-height: 18px; color: var(--muted); margin-bottom: 8px; }
-.legend i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
-.legend i.dot { width: 8px; height: 8px; border-radius: 50%; }
-svg { display: block; width: 100%; height: auto; }
+.step-title { margin-top: 2px; color: var(--ink); font-size: 1.1875rem; line-height: 1.3; font-weight: 600; letter-spacing: -0.012em; }
+.step-body { margin: 6px 0 0; min-height: 72px; font-size: 15.5px; line-height: 1.6; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 18px 0 8px; font-size: 13px; line-height: 18px; color: var(--muted); }
+.legend i { display: inline-block; width: 16px; height: 0; margin-right: 7px; vertical-align: middle; border-top: 1.5px solid var(--forest); }
+.legend i.dashed { border-top-style: dashed; }
+.legend i.dot, .legend i.ring { width: 9px; height: 9px; border-radius: 50%; }
+.legend i.dot { border: 0; background: var(--forest); }
+.legend i.ring { border: 1.5px solid var(--ink); background: var(--card); }
+svg#chart { display: block; width: 100%; height: auto; }
 .axis { stroke: var(--line-strong); stroke-width: 1; }
 .axis-text { fill: var(--muted); font-size: 12px; }
-.strip-title { font-size: 13px; line-height: 18px; color: var(--muted); margin: 14px 0 6px; font-variant-numeric: tabular-nums; }
-.strip { display: flex; flex-wrap: wrap; gap: 2px; min-height: 22px; }
-.cell { width: 14px; height: 20px; border-radius: 4px; background: var(--line); }
-.cell.probe { background: var(--series-2); }
-.cell.dropped { opacity: 0.35; }
-.cell.hit { background: var(--series-3); }
-.cell.buffered { background: var(--series-2); }
-.cell.merged { background: var(--series-3); }
-.meter { display: grid; grid-template-columns: 150px 1fr 96px; gap: 6px 10px; align-items: center; font-size: 13px; line-height: 18px; margin-top: 12px; color: var(--muted); }
-.bar { height: 10px; border-radius: 4px; background: var(--series-1); width: 0; transition: width 0.3s; }
-.bar.cost { background: var(--series-2); }
-.meter span:nth-child(3n) { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
-.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 16px; }
-button {
-  font: inherit; font-size: 14px; color: var(--ink); background: transparent;
-  border: 1px solid var(--line-strong); border-radius: 10px; padding: 6px 14px; cursor: pointer; min-height: 36px;
-}
-button:hover { background: var(--line); }
-button:focus-visible, input:focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; }
-input[type=range] { flex: 1 1 200px; min-width: 160px; accent-color: var(--series-1); }
+.key { fill: var(--quiet); }
+.model { stroke: var(--forest); stroke-width: 1.5; stroke-linecap: round; }
+.band { fill: var(--tile-2); }
+.query { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 2 4; }
+.guess { fill: var(--card); stroke: var(--ink); stroke-width: 1.5; }
+.found { fill: var(--forest); stroke: var(--card); stroke-width: 2; }
+.strip-title { margin: 16px 0 6px; font-size: 13px; line-height: 18px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.strip { display: flex; flex-wrap: wrap; gap: 3px; min-height: 18px; }
+.cell { width: 10px; height: 18px; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--line-strong); transition: opacity 0.2s, background 0.2s; }
+.cell.dropped { opacity: 0.3; }
+.cell.probe { background: var(--ink); box-shadow: none; }
+.cell.hit { background: var(--forest); box-shadow: none; }
+.cell.buffered { background: var(--tile-2); }
+.meter { display: grid; grid-template-columns: 120px 1fr 72px; gap: 8px 12px; align-items: center; margin-top: 16px; font-size: 13px; line-height: 18px; color: var(--muted); }
+.meter[hidden] { display: none; }
+.bar { height: 2px; width: 0; border-radius: 2px; background: var(--forest); transition: width 0.4s ease-out; }
+.bar.cost { background: var(--quiet); }
+.meter span:nth-child(3n) { text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 20px; }
+.controls button { min-height: 36px; padding: 0 16px; font-size: 14px; }
+input[type=range] { flex: 1 1 180px; min-width: 140px; accent-color: var(--forest); }
+.rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.rows li { display: grid; grid-template-columns: 168px 1fr; gap: 24px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.rows p { margin: 0; }
+.row-name { color: var(--ink); font-size: 15px; line-height: 1.55; font-weight: 600; letter-spacing: -0.006em; }
+.row-text { font-size: 15.5px; line-height: 1.6; }
 #tip {
-  position: fixed; pointer-events: none; display: none; background: var(--ink); color: var(--surface);
-  border-radius: 8px; padding: 6px 10px; font-size: 12px; line-height: 16px; z-index: 2;
-  font-variant-numeric: tabular-nums;
+  position: fixed; z-index: 2; display: none; pointer-events: none; white-space: pre; padding: 6px 10px; border-radius: 10px;
+  background: #121412; color: #fff; font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums;
 }
-table { border-collapse: collapse; width: 100%; font-size: 13px; line-height: 20px; }
-td { padding: 4px 8px 4px 0; border-top: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
-td:first-child { color: var(--muted); width: 45%; }
-details { margin-top: 20px; }
-summary { cursor: pointer; color: var(--ink); }
-.source { font-size: 13px; line-height: 20px; color: var(--muted); margin-top: 20px; }
-@media (max-width: 560px) {
-  .meter { grid-template-columns: 110px 1fr 76px; }
+details { margin-top: 20px; font-size: 14px; }
+summary { cursor: pointer; color: var(--muted); }
+table { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 13px; line-height: 20px; }
+td { padding: 6px 8px 6px 0; border-top: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+td:first-child { width: 48%; color: var(--muted); }
+.source { margin-top: 48px; font-size: 13px; line-height: 20px; color: var(--muted); }
+@media (max-width: 640px) {
+  .page { padding: 170px 16px 64px; }
+  #ridge { height: 180px; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .rows li { grid-template-columns: 1fr; gap: 4px; }
+  .card { padding: 18px; border-radius: 22px; }
+  .meter { grid-template-columns: 96px 1fr 64px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; }
 }
 </style>
 </head>
 <body>
-<main>
-  <h1>One query, one burst of inserts, one rebuild</h1>
-  <p class="lede">A learned index guesses where a key sits, then corrects the guess. This page replays a real stretch of a benchmark trace: every key, prediction and decision below was recorded from the run, not drawn by hand.</p>
-
-  <div class="panel status" aria-live="polite">
-    <div class="step-label" id="step-label"></div>
-    <div class="step-title" id="step-title"></div>
-    <p id="step-body"></p>
-  </div>
-
-  <div class="panel">
-    <div class="legend" id="legend"></div>
-    <svg id="chart" viewBox="0 0 820 340" role="img" aria-label="Stored keys in one leaf against their positions, with the linear model"></svg>
-    <div class="strip-title" id="window-title"></div>
-    <div class="strip" id="window-strip"></div>
-    <div class="strip-title" id="delta-title"></div>
-    <div class="strip" id="delta-strip"></div>
-    <div class="meter" id="meter" hidden>
-      <span>Expected saving</span><div><div class="bar" id="saving-bar"></div></div><span id="saving-value"></span>
-      <span>Cost to beat</span><div><div class="bar cost" id="cost-bar"></div></div><span id="cost-value"></span>
+<svg id="ridge" viewBox="0 0 1440 220" preserveAspectRatio="none" aria-hidden="true"></svg>
+<div class="page">
+  <header>
+    <h1>Adaptive learned index</h1>
+    <p class="subtitle">An ordered index in C++20 that predicts where a key is, proves its correction is bounded, and measures when a rebuild pays for itself.</p>
+    <div class="pills">
+      <a class="pill dark" href="#replay">Watch the replay</a>
+      <a class="pill" href="#results-section" hidden>Results</a>
+      <a class="pill" href="../docs/REPORT.md">Read the report</a>
     </div>
-    <div class="controls">
-      <button id="play" type="button">Play</button>
-      <button id="back" type="button" aria-label="Previous step">Back</button>
-      <button id="next" type="button" aria-label="Next step">Next</button>
-      <input id="scrub" type="range" min="0" value="0" aria-label="Replay position">
-    </div>
-  </div>
+    <div class="stats" id="stats"></div>
+  </header>
 
-  <details>
-    <summary>The recorded numbers</summary>
-    <table id="facts"></table>
-  </details>
-  <p class="source" id="source"></p>
-</main>
+  <main>
+    <section aria-labelledby="idea">
+      <h2 id="idea">The idea</h2>
+      <p>A sorted array can answer any lookup, but it has to search for every key. A learned index fits a line to where keys sit, so one multiply lands close to the answer and a short search finishes the job.</p>
+      <p>Late inserts are the hard part. Buffering them is cheap until reads start paying for the buffer, and merging is expensive unless it is earned. This index measures both sides, leaf by leaf, and rebuilds only when the expected saving beats the measured cost.</p>
+      <ul class="dashes">
+        <li>Predictions use one integer multiply. No key ever becomes a float.</li>
+        <li>A bad model costs time and can never change an answer.</li>
+        <li>Reads of old data never pay for recent writes.</li>
+      </ul>
+    </section>
+
+    <section id="replay" aria-labelledby="replay-title">
+      <h2 id="replay-title">One query, one burst of inserts, one rebuild</h2>
+      <div class="card" id="replay-card">
+        <div aria-live="polite">
+          <div class="step-label" id="step-label"></div>
+          <div class="step-title" id="step-title"></div>
+          <p class="step-body" id="step-body"></p>
+        </div>
+        <div class="legend" id="legend"></div>
+        <svg id="chart" viewBox="0 0 640 300" role="img" aria-label="Stored keys in one leaf against their positions, with the linear model"></svg>
+        <div class="strip-title" id="window-title"></div>
+        <div class="strip" id="window-strip"></div>
+        <div class="strip-title" id="delta-title"></div>
+        <div class="strip" id="delta-strip"></div>
+        <div class="meter" id="meter" hidden>
+          <span>Expected saving</span><div><div class="bar" id="saving-bar"></div></div><span id="saving-value"></span>
+          <span>Cost to beat</span><div><div class="bar cost" id="cost-bar"></div></div><span id="cost-value"></span>
+        </div>
+        <div class="controls">
+          <button id="play" class="dark" type="button">Play</button>
+          <button id="back" type="button" aria-label="Previous step">Back</button>
+          <button id="next" type="button" aria-label="Next step">Next</button>
+          <input id="scrub" type="range" min="0" value="0" aria-label="Replay position">
+        </div>
+      </div>
+      <details>
+        <summary>The recorded numbers</summary>
+        <table id="facts"></table>
+      </details>
+    </section>
+
+    <section id="results-section" aria-labelledby="results-title" hidden>
+      <h2 id="results-title">Results</h2>
+      <ul class="rows" id="results"></ul>
+    </section>
+
+    <section aria-labelledby="verified">
+      <h2 id="verified">How it is verified</h2>
+      <ul class="rows" id="verification"></ul>
+    </section>
+
+    <p class="source" id="source"></p>
+  </main>
+</div>
 <div id="tip"></div>
 <script src="recording.js"></script>
+<script src="results.js"></script>
 <script>
 "use strict";
 const R = window.RECORDING;
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => Number(n).toLocaleString("en-US");
 const SVG_NS = "http://www.w3.org/2000/svg";
-const CHART = { width: 820, height: 340, left: 56, right: 12, top: 12, bottom: 38 };
+const CHART = { width: 640, height: 300, left: 44, right: 8, top: 10, bottom: 34 };
 
 // Keys are 64-bit, so they stay BigInt. Offsets inside one leaf are small enough
 // to draw, and drawing is the only place they become ordinary numbers.
@@ -292,30 +356,28 @@ function drawAxes(svg, scale) {
   element("text", { x: 12, y: (CHART.top + y0) / 2, class: "axis-text", "text-anchor": "middle", transform: `rotate(-90 12 ${(CHART.top + y0) / 2})` }, svg).textContent = "position";
 }
 
-function drawLeaf(svg, scale, leaf, positionOffset, color) {
+function drawLeaf(svg, scale, leaf, positionOffset, dashed) {
   const points = leaf.points;
   const first = points[0];
   const last = points[points.length - 1];
   element("line", {
     x1: scale.x(offset(first[1])), y1: scale.y(first[2] + positionOffset),
     x2: scale.x(offset(last[1])), y2: scale.y(last[2] + positionOffset),
-    stroke: color, "stroke-width": 2, "stroke-linecap": "round",
+    class: "model", "stroke-dasharray": dashed ? "5 4" : "none",
   }, svg);
   for (const [position, key, predicted] of points) {
     const shifted = position + positionOffset;
-    const dot = element("circle", { cx: scale.x(offset(key)), cy: scale.y(shifted), r: 2.5, fill: color, "fill-opacity": 0.55 }, svg);
-    dot.dataset.tip = `position ${fmt(shifted)}\nkey ${key}\nmodel says ${fmt(predicted + positionOffset)}`;
-    const hit = element("circle", { cx: dot.getAttribute("cx"), cy: dot.getAttribute("cy"), r: 8, fill: "transparent" }, svg);
-    hit.dataset.tip = dot.dataset.tip;
+    const x = scale.x(offset(key));
+    const y = scale.y(shifted);
+    element("circle", { cx: x, cy: y, r: 1.6, class: "key" }, svg);
+    const hit = element("circle", { cx: x, cy: y, r: 8, fill: "transparent" }, svg);
+    hit.dataset.tip = `position ${fmt(shifted)}\nkey ${key}\nmodel says ${fmt(predicted + positionOffset)}`;
   }
 }
 
 function drawChart(frame) {
   const svg = $("chart");
   svg.replaceChildren();
-  const series1 = "var(--series-1)";
-  const series2 = "var(--series-2)";
-  const series3 = "var(--series-3)";
   const after = frame.chart === "after";
   const scale = chartScale(after ? finalLeaves.map((leaf) => leaf.points) : [R.leaf_before.points]);
   drawAxes(svg, scale);
@@ -323,46 +385,45 @@ function drawChart(frame) {
   if (frame.window) {
     const top = scale.y(R.query.window_hi);
     const bottom = scale.y(R.query.window_lo);
-    element("rect", { x: CHART.left, width: CHART.width - CHART.left - CHART.right, y: top, height: Math.max(bottom - top, 2), fill: series2, "fill-opacity": 0.14 }, svg);
+    element("rect", { x: CHART.left, width: CHART.width - CHART.left - CHART.right, y: top, height: Math.max(bottom - top, 2), class: "band" }, svg);
   }
   if (after) {
     let positionOffset = 0;
     finalLeaves.forEach((leaf, index) => {
-      drawLeaf(svg, scale, leaf, positionOffset, index % 2 === 0 ? series1 : series3);
+      drawLeaf(svg, scale, leaf, positionOffset, index % 2 === 1);
       positionOffset += leaf.keys;
     });
   } else {
-    drawLeaf(svg, scale, R.leaf_before, 0, series1);
+    drawLeaf(svg, scale, R.leaf_before, 0, false);
   }
 
   const queryX = scale.x(offset(queryKey));
   const showQuery = frame.prediction || frame.window || frame.position !== null || frame.afterQuery || frame === frames[0];
   if (showQuery) {
-    element("line", { x1: queryX, x2: queryX, y1: CHART.top, y2: CHART.height - CHART.bottom, stroke: "var(--ink)", "stroke-width": 1, "stroke-dasharray": "3 3" }, svg);
+    element("line", { x1: queryX, x2: queryX, y1: CHART.top, y2: CHART.height - CHART.bottom, class: "query" }, svg);
   }
   if (frame.prediction && !after) {
-    element("circle", { cx: queryX, cy: scale.y(R.query.predicted), r: 6, fill: series2, stroke: "var(--tile)", "stroke-width": 2 }, svg);
+    element("circle", { cx: queryX, cy: scale.y(R.query.predicted), r: 5, class: "guess" }, svg);
   }
   if (frame.position !== null && !after) {
-    element("circle", { cx: queryX, cy: scale.y(frame.position), r: 6, fill: series3, stroke: "var(--tile)", "stroke-width": 2 }, svg);
+    element("circle", { cx: queryX, cy: scale.y(frame.position), r: 5, class: "found" }, svg);
   }
   if (frame.afterQuery) {
     // Positions in query_after are local to the query's new leaf.
     let before = 0;
     for (let i = 0; i < R.query_after_leaf_offset; i += 1) before += finalLeaves[i].keys;
-    element("circle", { cx: queryX, cy: scale.y(before + R.query_after.position), r: 6, fill: series3, stroke: "var(--tile)", "stroke-width": 2 }, svg);
+    element("circle", { cx: queryX, cy: scale.y(before + R.query_after.position), r: 5, class: "found" }, svg);
   }
 }
 
 function drawLegend(frame) {
   const entries = frame.chart === "after"
-    ? finalLeaves.map((leaf, index) => [`New leaf ${index + 1}: ${fmt(leaf.keys)} keys`, index % 2 === 0 ? "var(--series-1)" : "var(--series-3)", false])
-    : [["Stored keys and model line", "var(--series-1)", false], ["Prediction", "var(--series-2)", true], ["Corrected position", "var(--series-3)", true]];
-  $("legend").replaceChildren(...entries.map(([text, color, dot]) => {
+    ? finalLeaves.map((leaf, index) => [`New leaf ${index + 1}, ${fmt(leaf.keys)} keys`, index % 2 === 1 ? "dashed" : "solid"])
+    : [["Stored keys and model", "solid"], ["Prediction", "ring"], ["True position", "dot"]];
+  $("legend").replaceChildren(...entries.map(([text, kind]) => {
     const span = document.createElement("span");
     const swatch = document.createElement("i");
-    if (dot) swatch.className = "dot";
-    swatch.style.background = color;
+    swatch.className = kind;
     span.append(swatch, text);
     return span;
   }));
@@ -372,8 +433,8 @@ function drawWindow(frame) {
   const strip = $("window-strip");
   strip.replaceChildren();
   $("window-title").textContent = frame.window
-    ? `Correction window: ${searchedCount} keys from position ${fmt(R.window_first_position)}`
-    : "Correction window: not in use";
+    ? `Search window, ${searchedCount} keys`
+    : "Search window";
   if (!frame.window) return;
   const dropped = new Set(frame.dropped || []);
   for (let i = 0; i < searchedCount; i += 1) {
@@ -393,8 +454,8 @@ function drawDelta(frame) {
   strip.replaceChildren();
   const count = frame.merged ? 0 : frame.buffered;
   $("delta-title").textContent = frame.merged
-    ? `Buffer: empty, ${R.rebuild.delta_keys} keys merged`
-    : `Buffer: ${count} of the ${R.rebuild.delta_keys} keys that triggered this rebuild`;
+    ? `Write buffer, empty after merging ${R.rebuild.delta_keys} keys`
+    : `Write buffer, ${count} keys`;
   for (let i = 0; i < count; i += 1) {
     const cell = document.createElement("div");
     cell.className = "cell buffered";
@@ -409,8 +470,8 @@ function drawMeter(frame) {
   const widest = Math.max(R.rebuild.expected_saving_ns, required);
   $("saving-bar").style.width = `${(R.rebuild.expected_saving_ns / widest) * 100}%`;
   $("cost-bar").style.width = `${(required / widest) * 100}%`;
-  $("saving-value").textContent = `${(R.rebuild.expected_saving_ns / 1000).toFixed(1)} µs`;
-  $("cost-value").textContent = `${(required / 1000).toFixed(1)} µs`;
+  $("saving-value").textContent = `${(R.rebuild.expected_saving_ns / 1000).toFixed(1)} \u00b5s`;
+  $("cost-value").textContent = `${(required / 1000).toFixed(1)} \u00b5s`;
 }
 
 function show(index) {
@@ -469,7 +530,6 @@ document.addEventListener("mousemove", (event) => {
   const text = event.target.dataset ? event.target.dataset.tip : null;
   if (!text) { tip.style.display = "none"; return; }
   tip.style.display = "block";
-  tip.style.whiteSpace = "pre";
   tip.textContent = text;
   tip.style.left = `${Math.min(event.clientX + 12, window.innerWidth - tip.offsetWidth - 8)}px`;
   tip.style.top = `${event.clientY + 12}px`;
@@ -499,10 +559,110 @@ $("facts").replaceChildren(...facts.map(([name, value]) => {
   return row;
 }));
 
-$("source").textContent = `Recorded from ${R.meta.dataset}, stride ${R.meta.stride}, workload ${R.meta.workload}, seed ${R.meta.seed}, ${fmt(R.meta.ops)} operations. Trace digest ${R.meta.trace_digest}. Costs are frozen so the recording is reproducible.`;
+$("source").textContent = `The line at the top of this page is the real density of keys in the data. The replay is recorded from ${R.meta.dataset}, stride ${R.meta.stride}, workload ${R.meta.workload}, seed ${R.meta.seed}, ${fmt(R.meta.ops)} operations. Trace digest ${R.meta.trace_digest}. Costs are frozen so the recording is reproducible.`;
 
+// The ridge at the top of the page is the real key density from this run.
+function drawRidge() {
+  const svg = $("ridge");
+  const values = R.ridge;
+  const width = 1440;
+  const height = 220;
+  const path = values.map((value, index) => {
+    const x = (index / (values.length - 1)) * width;
+    const y = height - 16 - value * (height - 40);
+    return `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
+  }).join(" ");
+  const line = element("path", { d: path, class: "ridge-line" }, svg);
+  if (reducedMotion) return;
+  // A clip reveals the line. Dashes would not work: non-scaling strokes measure
+  // dash lengths in screen pixels, not in the path's own units.
+  const defs = element("defs", {}, svg);
+  const clip = element("clipPath", { id: "ridge-reveal" }, defs);
+  const rect = element("rect", { x: 0, y: 0, width: 0, height }, clip);
+  line.setAttribute("clip-path", "url(#ridge-reveal)");
+  const started = performance.now();
+  const duration = 2600;
+  const step = (now) => {
+    const t = Math.min(1, (now - started) / duration);
+    const eased = 1 - (1 - t) * (1 - t) * (1 - t);
+    rect.setAttribute("width", String(eased * width));
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function compact(n) {
+  if (n >= 1e9) return `${(n / 1e9).toFixed(n >= 1e10 ? 0 : 1)}B`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  return fmt(n);
+}
+
+// Only numbers with a recorded source reach the page. Anything missing is hidden.
+function fillResults() {
+  const data = window.RESULTS || { quality: {} };
+  const q = data.quality;
+  const tiles = [...(data.headline ? data.headline.tiles : [])];
+  const checked = q.oracle_ops + (q.fuzz ? q.fuzz.ops : 0);
+  tiles.push([compact(checked), "operations checked against an oracle"]);
+  if (q.mutation) tiles.push([`${q.mutation.killed} of ${q.mutation.scored}`, "deliberate bugs caught by the tests"]);
+  if (q.line_coverage) tiles.push([`${q.line_coverage.toFixed(1)}%`, "line coverage"]);
+  tiles.push(["0", "wrong answers"]);
+  $("stats").replaceChildren(...tiles.slice(0, 4).map(([value, label]) => {
+    const tile = document.createElement("div");
+    tile.className = "stat";
+    const number = document.createElement("div");
+    number.className = "stat-value";
+    number.textContent = value;
+    const text = document.createElement("div");
+    text.className = "stat-label";
+    text.textContent = label;
+    tile.append(number, text);
+    return tile;
+  }));
+
+  const rows = [];
+  rows.push(["Correctness suite", `${fmt(q.oracle_ops)} operations compared with an ordered-map oracle, across six key spaces chosen to break it.`]);
+  if (q.fuzz) rows.push(["Randomized fuzzing", `${fmt(q.fuzz.ops)} operations across ${fmt(q.fuzz.traces)} random index shapes, forcing ${fmt(q.fuzz.rebuilds)} rebuilds. ${fmt(q.fuzz.mismatches)} mismatches.`]);
+  if (q.mutation) rows.push(["Mutation testing", `${q.mutation.killed} of ${q.mutation.scored} deliberate bugs caught, ${q.mutation.score_percent}%.`]);
+  if (q.line_coverage) rows.push(["Coverage", `${q.line_coverage.toFixed(1)}% of lines and ${q.branch_coverage.toFixed(1)}% of branches in the library.`]);
+  rows.push(["Sanitizers", "The full suite runs clean under AddressSanitizer and UndefinedBehaviorSanitizer."]);
+  rows.push(["Independent review", "A separate reviewer reproduced the suite and searched for counterexamples. It found no wrong answers. Its findings are fixed and recorded."]);
+  $("verification").replaceChildren(...rows.map(([name, text]) => hairlineRow(name, text)));
+
+  const section = $("results-section");
+  if (data.headline) {
+    section.hidden = false;
+    $("results").replaceChildren(...data.headline.rows.map(([name, text]) => hairlineRow(name, text)));
+    document.querySelector('a[href="#results-section"]').hidden = false;
+  }
+}
+
+function hairlineRow(name, text) {
+  const item = document.createElement("li");
+  const label = document.createElement("p");
+  label.className = "row-name";
+  label.textContent = name;
+  const body = document.createElement("p");
+  body.className = "row-text";
+  body.textContent = text;
+  item.append(label, body);
+  return item;
+}
+
+drawRidge();
+fillResults();
 show(0);
-if (!reducedMotion) play();
+
+// The replay starts when it comes into view, not behind the reader's back.
+if (!reducedMotion && "IntersectionObserver" in window) {
+  const observer = new IntersectionObserver((entries) => {
+    if (entries.some((entry) => entry.isIntersecting)) {
+      observer.disconnect();
+      play();
+    }
+  }, { threshold: 0.4 });
+  observer.observe($("replay-card"));
+}
 </script>
 </body>
 </html>

@@ -32,6 +32,7 @@ constexpr std::size_t kMaxBurst = 64;
 constexpr std::size_t kMaxBaseKeys = 4096;
 constexpr std::size_t kSampledPoints = 240;
 constexpr std::size_t kWindowKeysShown = 24;
+constexpr std::size_t kRidgePoints = 360;
 
 struct Options {
   std::string dataset;
@@ -119,6 +120,29 @@ void print_leaf(std::FILE* out, Index& index, std::size_t leaf) {
     first = false;
   }
   std::fputs("]}", out);
+}
+
+// The page's hairline: how densely keys arrive across the key range, in equal
+// buckets, as a fraction of the busiest bucket. This is the slope of the curve the
+// models fit, so the line is the shape the index has to learn. The sparse first 2
+// percent of keys is skipped, because a long empty tail would flatten the rest.
+void print_ridge(std::FILE* out, const std::vector<Key>& universe) {
+  const Key first = universe[universe.size() / 50];
+  const Key span = universe.back() - first;
+  std::vector<std::uint64_t> counts(kRidgePoints, 0);
+  for (Key key : universe) {
+    if (key < first) continue;
+    const auto bucket = static_cast<std::size_t>(
+        (static_cast<U128>(key - first) * (kRidgePoints - 1)) / span);
+    ++counts[bucket];
+  }
+  const std::uint64_t busiest = *std::max_element(counts.begin(), counts.end());
+  std::fputc('[', out);
+  for (std::size_t i = 0; i < kRidgePoints; ++i) {
+    std::fprintf(out, "%s%.4f", i == 0 ? "" : ",",
+                 static_cast<double>(counts[i]) / static_cast<double>(busiest));
+  }
+  std::fputc(']', out);
 }
 
 }  // namespace
@@ -213,7 +237,9 @@ int main(int argc, char** argv) {
                trace.ops.size(), workload.digest, options.epsilon, options.margin,
                options.half_life, query_op, burst_start, rebuild_op, rebuild_op - query_op);
 
-  std::fprintf(out, "\"query_key\":\"%" PRIu64 "\",\n\"query\":", query_key);
+  std::fputs("\"ridge\":", out);
+  print_ridge(out, universe);
+  std::fprintf(out, ",\n\"query_key\":\"%" PRIu64 "\",\n\"query\":", query_key);
   print_lookup(out, query);
   std::fputs(",\n\"leaf_before\":", out);
   print_leaf(out, index, query.leaf);
