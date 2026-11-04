@@ -1,9 +1,10 @@
 // Replays a trace file against an index and the oracle, and prints the digest.
-// Usage: replay --trace t.bin [--index sorted_vector]
+// Usage: replay --trace t.bin [--index sorted_vector|fixed|adaptive]
 #include <cinttypes>
 #include <cstdio>
 #include <string>
 
+#include "ali/dynamic_index.h"
 #include "ali/map_oracle.h"
 #include "ali/replay.h"
 #include "ali/sorted_vector_index.h"
@@ -56,6 +57,8 @@ int main(int argc, char** argv) {
   }
   const ali::Trace trace = ali::read_trace(trace_path);
   if (index == "sorted_vector") return run<ali::SortedVectorIndex>(index, trace);
+  if (index == "fixed") return run<ali::DynamicIndex<ali::FixedPolicy>>(index, trace);
+  if (index == "adaptive") return run<ali::DynamicIndex<ali::AdaptivePolicy>>(index, trace);
   std::fprintf(stderr, "unknown index %s\n", index.c_str());
   return 2;
 }
