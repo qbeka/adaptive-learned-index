@@ -138,7 +138,8 @@ void print_ridge(std::FILE* out, const std::vector<Key>& universe) {
   }
   const std::uint64_t busiest = *std::max_element(counts.begin(), counts.end());
   std::fputc('[', out);
-  for (std::size_t i = 0; i < kRidgePoints; ++i) {
+  // The last bucket holds only the largest key, so it is left out.
+  for (std::size_t i = 0; i + 1 < kRidgePoints; ++i) {
     std::fprintf(out, "%s%.4f", i == 0 ? "" : ",",
                  static_cast<double>(counts[i]) / static_cast<double>(busiest));
   }
