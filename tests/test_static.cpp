@@ -112,6 +112,34 @@ void check_segment_cap_is_respected() {
   CHECK(index.lookup(5000) == Value{2500});
 }
 
+// Found by independent review. An epsilon this large once overflowed the 32-bit
+// error bound, leaving a window too small for the keys it had to cover.
+void check_huge_epsilon_cannot_truncate_the_error_bound() {
+  const std::vector<Entry> entries = {{0, 1}, {Key{1} << 63, 2}, {(Key{1} << 63) + 1, 3}};
+  StaticIndex index({(std::uint64_t{1} << 33) + 1});
+  index.bulk_load(entries);
+  for (const Entry& entry : entries) CHECK(index.lookup(entry.key) == entry.value);
+  CHECK(index.lower_bound(1)->key == Key{1} << 63);
+  CHECK(index.rank((Key{1} << 63) + 1) == 2);
+  CHECK(index.widened_searches() == 0);
+}
+
+void check_rejected_load_keeps_contents() {
+  StaticIndex index;
+  const std::vector<Entry> good = {{1, 10}, {2, 20}};
+  index.bulk_load(good);
+  const std::vector<Entry> bad = {{9, 1}, {8, 1}};
+  bool threw = false;
+  try {
+    index.bulk_load(bad);
+  } catch (const std::invalid_argument&) {
+    threw = true;
+  }
+  CHECK(threw);
+  CHECK(index.lookup(2) == Value{20});
+  CHECK(index.size() == 2);
+}
+
 void check_traces_match_the_oracle() {
   std::size_t traces = 0;
   std::size_t ops = 0;
@@ -186,6 +214,8 @@ int main() {
   check_observed_error_respects_epsilon();
   check_segment_cap_is_respected();
   check_widen_finds_every_position();
+  check_huge_epsilon_cannot_truncate_the_error_bound();
+  check_rejected_load_keeps_contents();
   check_traces_match_the_oracle();
   check_corrupted_bounds_never_change_an_answer();
   return 0;

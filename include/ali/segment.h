@@ -41,11 +41,17 @@ inline std::uint64_t predict(const SegmentModel& model, Key key) {
   return multiply_high(key - model.first_key, model.slope);
 }
 
-// Converts the fraction num / den, in lowest-effort form, to 0.64 fixed point.
+// Converts the fraction num / den to 0.64 fixed point.
 inline std::uint64_t fraction_to_slope(std::uint64_t num, std::uint64_t den) {
   if (num >= den) return std::numeric_limits<std::uint64_t>::max();
   return static_cast<std::uint64_t>((static_cast<U128>(num) << 64) / den);
 }
+
+// Limits that keep the measured error bounds inside 32 bits. A larger epsilon
+// has no use, and a stored over or under must never be truncated: that would
+// make the window too small on every query in the segment.
+inline constexpr std::uint64_t kMaxEpsilon = std::uint64_t{1} << 31;
+inline constexpr std::size_t kMaxSegmentKeys = std::size_t{1} << 31;
 
 // Fits the longest prefix of keys[0, n) that one line through (keys[0], 0) can
 // cover within `epsilon` positions, and returns its length. This is the
@@ -53,15 +59,17 @@ inline std::uint64_t fraction_to_slope(std::uint64_t num, std::uint64_t den) {
 // each new key can only narrow it, and the segment ends when it becomes empty.
 //
 // Slope bounds stay exact fractions and are compared by cross multiplication,
-// so the fit needs no division per key and no floating point. Numerators are at
-// most about 2^33 and denominators below 2^64, so products fit in 128 bits.
+// so the fit needs no division per key and no floating point. Every factor is
+// below 2^64, so products fit in 128 bits.
 //
-// keys must be strictly increasing and n must be at least 1.
+// keys must be strictly increasing and n must be at least 1. Epsilon and max_keys
+// are clamped to the limits above.
 inline std::size_t fit_prefix(const Key* keys, std::size_t n,
-                              std::uint64_t epsilon, std::size_t max_keys,
+                              std::uint64_t requested_epsilon, std::size_t max_keys,
                               SegmentModel& model) {
   const Key first = keys[0];
-  const std::size_t limit = std::min(n, max_keys);
+  const std::uint64_t epsilon = std::min(requested_epsilon, kMaxEpsilon);
+  const std::size_t limit = std::min({n, max_keys, kMaxSegmentKeys});
   std::uint64_t lo_num = 0, lo_den = 1;  // Lower slope bound, starts at 0.
   std::uint64_t hi_num = 1, hi_den = 1;  // Upper slope bound, starts at 1.
 

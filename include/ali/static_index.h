@@ -13,7 +13,7 @@ namespace ali {
 
 struct StaticConfig {
   std::uint64_t epsilon = 64;  // Fitting tolerance, in positions.
-  std::size_t max_segment_keys = std::size_t{1} << 32;
+  std::size_t max_segment_keys = kMaxSegmentKeys;
 };
 
 // Bytes, split the way docs/RESEARCH.md reports them.
