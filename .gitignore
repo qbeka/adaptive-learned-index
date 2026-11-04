@@ -1,0 +1,19 @@
+# Compiled output
+build/
+
+# Baseline clones. Only third_party/PINS and third_party/patches are tracked.
+third_party/*
+!third_party/PINS
+!third_party/patches/
+
+# Large inputs and raw benchmark output. Hashes live in run manifests.
+data/*
+!data/README.md
+results/raw/
+
+# Python
+.venv/
+__pycache__/
+
+# macOS
+.DS_Store
