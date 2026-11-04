@@ -137,6 +137,109 @@ void check_explain_matches_lookup() {
   }
 }
 
+using AdaptiveIndex = DynamicIndex<AdaptivePolicy>;
+
+AdaptiveConfig frozen_costs() {
+  AdaptiveConfig config;
+  config.measure_costs = false;  // Decisions must not depend on the clock here.
+  config.min_samples = 16;
+  return config;
+}
+
+std::vector<Entry> even_keys(std::size_t count) {
+  std::vector<Entry> entries;
+  for (Key key = 0; key < count; ++key) entries.push_back({key * 2, key});
+  return entries;
+}
+
+// Writes alone cannot justify a merge while the buffer is small: nobody reads
+// it, and shifting a few entries is cheap.
+void check_adaptive_leaves_write_only_leaves_alone() {
+  DynamicConfig config;
+  config.max_leaf_keys = 1 << 14;
+  AdaptiveIndex index(config, AdaptivePolicy(frozen_costs()));
+  index.bulk_load(even_keys(1 << 14));
+  for (Key key = 0; key < 200; ++key) index.insert_or_assign(key * 2 + 1, key);
+  CHECK(index.stats().rebuilds == 0);
+  index.check_invariants();
+}
+
+// Reads that hit the base never touch the delta, so they must earn no rebuild.
+void check_adaptive_ignores_reads_that_skip_the_delta() {
+  DynamicConfig config;
+  AdaptiveIndex index(config, AdaptivePolicy(frozen_costs()));
+  index.bulk_load(even_keys(1 << 12));
+  for (Key key = 0; key < 64; ++key) index.insert_or_assign(key * 2 + 1, key);
+  for (int round = 0; round < 100; ++round) {
+    for (Key key = 0; key < 1 << 12; ++key) CHECK(index.lookup(key * 2));
+  }
+  CHECK(index.stats().rebuilds == 0);
+}
+
+// Reads of buffered keys do pay, so enough of them must trigger a merge, and
+// afterwards those keys are found in the base.
+void check_adaptive_rebuilds_a_leaf_with_a_hot_delta() {
+  DynamicConfig config;
+  AdaptiveIndex index(config, AdaptivePolicy(frozen_costs()));
+  index.bulk_load(even_keys(1 << 12));
+  for (Key key = 0; key < 64; ++key) index.insert_or_assign(key * 2 + 1, key);
+  CHECK(index.stats().rebuilds == 0);
+  for (int round = 0; round < 200000 && index.stats().rebuilds == 0; ++round) {
+    CHECK(index.lookup(static_cast<Key>(round % 64) * 2 + 1));
+  }
+  CHECK(index.stats().rebuilds == 1);
+  CHECK(index.explain_lookup(1).in_base);
+  index.check_invariants();
+}
+
+// The decision must rise with reads and fall with leaf size.
+void check_adaptive_decision_moves_the_right_way() {
+  const AdaptivePolicy policy(frozen_costs());
+  AdaptivePolicy::LeafState state;
+  state.reads = 1000;
+  const LeafView small{1 << 10, 64};
+  const LeafView large{1 << 14, 64};
+  CHECK(policy.expected_saving_ns(state, small) > 0);
+  CHECK(policy.merge_cost_ns(large) > policy.merge_cost_ns(small));
+  AdaptivePolicy::LeafState busier = state;
+  busier.reads = 2000;
+  CHECK(policy.expected_saving_ns(busier, small) > policy.expected_saving_ns(state, small));
+  // If writes will refill the buffer at once, merging saves less per read.
+  AdaptivePolicy::LeafState writing = state;
+  writing.writes = 1 << 12;
+  const double read_part_with_refill =
+      policy.expected_saving_ns(writing, small) -
+      writing.writes * frozen_costs().ns_per_shifted_entry * 64 / 2;
+  CHECK(read_part_with_refill < policy.expected_saving_ns(state, small));
+}
+
+// The hysteresis promise: after a rebuild the counters are clear, so a single
+// burst cannot pay for a second rebuild. The loop alternates a small write burst
+// and an equally small read burst, then bounds what the policy spent.
+void check_adaptive_does_not_thrash_on_repeated_bursts() {
+  DynamicConfig config;
+  AdaptiveIndex index(config, AdaptivePolicy(frozen_costs()));
+  index.bulk_load(even_keys(1 << 12));
+  Key next = 1;
+  std::uint64_t reads_of_delta = 0;
+  for (int burst = 0; burst < 400; ++burst) {
+    std::vector<Key> fresh;
+    for (int i = 0; i < 8; ++i, next += 2) {
+      if (next >= (1 << 13)) next = 1;
+      if (index.insert_or_assign(next, next)) fresh.push_back(next);
+    }
+    for (Key key : fresh) {
+      index.lookup(key);
+      ++reads_of_delta;
+    }
+  }
+  // Ski rental: a merge of about 4096 keys costs about 41us at the frozen 10ns
+  // per key, and each buffered read saves at most about 20ns * 6 steps. A merge
+  // therefore needs on the order of hundreds of reads or more to be earned.
+  CHECK(index.stats().rebuilds * 300 <= reads_of_delta);
+  index.check_invariants();
+}
+
 template <class Index>
 std::size_t replay_with_invariant_checks(Index& index, const Trace& trace) {
   MapOracle oracle;
@@ -192,6 +295,47 @@ void check_traces_match_the_oracle() {
               static_cast<unsigned long long>(splits));
 }
 
+// Rebuild timing can never change an answer, so the adaptive policy is replayed
+// with measured costs too, where decisions depend on the clock.
+void check_adaptive_traces_match_the_oracle() {
+  std::size_t traces = 0;
+  std::size_t ops = 0;
+  std::uint64_t rebuilds = 0;
+  for (KeySpace space : kAllKeySpaces) {
+    for (std::uint64_t seed = 1; seed <= 6; ++seed) {
+      for (std::size_t bulk_keys : {0UL, 100UL, 5000UL}) {
+        for (bool measured : {false, true}) {
+          for (std::size_t max_leaf : {std::size_t{16}, std::size_t{256}, std::size_t{4096}}) {
+            TraceConfig trace_config;
+            trace_config.seed = seed * 15485863 + bulk_keys;
+            trace_config.bulk_keys = bulk_keys;
+            trace_config.ops = 3000;
+            trace_config.space = space;
+            const Trace trace = generate_trace(trace_config);
+            DynamicConfig config;
+            config.epsilon = 4;
+            config.max_leaf_keys = max_leaf;
+            config.delta_capacity = 32;
+            AdaptiveConfig adaptive = frozen_costs();
+            adaptive.measure_costs = measured;
+            adaptive.min_delta_keys = 2;
+            adaptive.min_samples = 4;
+            AdaptiveIndex index(config, AdaptivePolicy(adaptive));
+            ops += replay_with_invariant_checks(index, trace);
+            CHECK(index.widened_searches() == 0);
+            rebuilds += index.stats().rebuilds;
+            ++traces;
+          }
+        }
+      }
+    }
+  }
+  CHECK(rebuilds > 0);
+  std::printf("adaptive: %zu traces, %zu operations matched the oracle, "
+              "%llu rebuilds\n",
+              traces, ops, static_cast<unsigned long long>(rebuilds));
+}
+
 }  // namespace
 
 int main() {
@@ -201,6 +345,12 @@ int main() {
   check_reads_across_a_split();
   check_rebuild_stats_add_up();
   check_explain_matches_lookup();
+  check_adaptive_leaves_write_only_leaves_alone();
+  check_adaptive_ignores_reads_that_skip_the_delta();
+  check_adaptive_rebuilds_a_leaf_with_a_hot_delta();
+  check_adaptive_decision_moves_the_right_way();
+  check_adaptive_does_not_thrash_on_repeated_bursts();
   check_traces_match_the_oracle();
+  check_adaptive_traces_match_the_oracle();
   return 0;
 }
