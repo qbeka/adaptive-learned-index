@@ -91,3 +91,29 @@ quality-of-service class instead.
 
 A process starts only when the 1-minute load average is below the spec's
 `max_load`. Load before and after each process is stored.
+
+## Amendment, 4 November 2026: gate relaxed
+
+Other jobs on this shared machine held the load average near 170, so the quiet gate
+had stopped the experiments at 12 of 468 validation runs. The owner chose to relax
+it rather than wait. The limit is now 1000, which in practice removes it. This was
+decided before any validation or test result was analysed.
+
+What changes:
+
+- Timings are taken on a heavily loaded machine. The same code has swung by about
+  2x under load, so throughput and latency are noisier and may understate every
+  index. They are reported as shared-machine measurements, never as peak figures.
+- Pairing still helps, because every index in a replicate replays the same trace in
+  shuffled order. Noise that drifts during a replicate is not removed, and the
+  bootstrap intervals are expected to widen.
+- Load before and after every process stays in `raw.jsonl`, and the report states
+  its median and range.
+
+What does not change: the hypotheses, the selection rule, the decision rule and
+the seeds. Rebuild counts, keys merged, bytes moved, memory and correctness results
+do not depend on load for a fixed policy, so those remain as strong as planned. The
+adaptive policy's decisions do use measured costs, so its counts can shift with load.
+
+To replace these numbers on a quiet machine, delete the run folders and rerun
+`scripts/run_full_benchmark.sh`, which uses each spec's own gate.

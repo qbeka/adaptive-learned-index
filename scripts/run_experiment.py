@@ -116,6 +116,16 @@ def command_for(spec: dict, cell: dict, replicate: int, binary: Path) -> list[st
 def write_manifest(run_dir: Path, spec: dict, spec_path: Path, max_load: float) -> None:
     path = run_dir / "manifest.json"
     if path.exists():
+        # A resumed run may use a different gate. The manifest keeps every change.
+        manifest = json.loads(path.read_text())
+        if manifest["max_load"] != max_load:
+            manifest.setdefault("max_load_history", []).append({
+                "from": manifest["max_load"], "to": max_load,
+                "records_before_change": sum(1 for _ in open(run_dir / "raw.jsonl")),
+                "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            })
+            manifest["max_load"] = max_load
+            path.write_text(json.dumps(manifest, indent=2) + "\n")
         return
     inputs = {}
     for dataset in spec.get("matrix", {}).get("dataset", []):
