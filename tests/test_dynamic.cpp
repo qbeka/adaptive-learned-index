@@ -234,6 +234,48 @@ void check_seal_keeps_appended_keys_and_skips_the_merge() {
   CHECK(memory.capacity < memory.total_used() + 64 * sizeof(Entry) + 8192);
 }
 
+void check_rejected_load_keeps_contents() {
+  FixedIndex index = make_index(4, 64, 8);
+  const std::vector<Entry> good = {{1, 10}, {2, 20}};
+  index.bulk_load(good);
+  index.insert_or_assign(3, 30);
+  const std::vector<Entry> bad = {{9, 1}, {8, 1}};
+  bool threw = false;
+  try {
+    index.bulk_load(bad);
+  } catch (const std::invalid_argument&) {
+    threw = true;
+  }
+  CHECK(threw);
+  CHECK(index.lookup(3) == Value{30});
+  CHECK(index.size() == 3);
+  index.check_invariants();
+}
+
+// Old activity must stop counting. A leaf with plenty of recent reads goes idle
+// while other leaves stay busy, and must lose that evidence.
+void check_counters_decay_while_a_leaf_is_idle() {
+  AdaptiveConfig adaptive = frozen_costs();
+  adaptive.half_life_log2 = 8;
+  AdaptivePolicy policy(adaptive);
+  AdaptivePolicy::LeafState idle;
+  AdaptivePolicy::LeafState busy;
+  for (int i = 0; i < 200; ++i) policy.on_delta_read(idle);
+  CHECK(idle.reads == 200);  // Inside one half-life, nothing has decayed.
+  for (int i = 0; i < 1 << 12; ++i) policy.on_delta_read(busy);
+  policy.on_delta_read(idle);  // Touching a leaf applies the decay it missed.
+  CHECK(idle.reads <= 2);
+}
+
+void check_extreme_half_life_is_safe() {
+  AdaptiveConfig adaptive = frozen_costs();
+  adaptive.half_life_log2 = 200;
+  AdaptivePolicy policy(adaptive);
+  AdaptivePolicy::LeafState state;
+  policy.on_delta_read(state);
+  CHECK(state.reads == 1);
+}
+
 // A compiler once deleted the calibration loop and this measured zero, which
 // silently removed write costs from every decision.
 void check_shift_cost_calibration_measures_something() {
@@ -385,6 +427,9 @@ int main() {
   check_adaptive_ignores_reads_that_skip_the_delta();
   check_adaptive_rebuilds_a_leaf_with_a_hot_delta();
   check_adaptive_decision_moves_the_right_way();
+  check_rejected_load_keeps_contents();
+  check_counters_decay_while_a_leaf_is_idle();
+  check_extreme_half_life_is_safe();
   check_shift_cost_calibration_measures_something();
   check_seal_keeps_appended_keys_and_skips_the_merge();
   check_adaptive_does_not_thrash_on_repeated_bursts();

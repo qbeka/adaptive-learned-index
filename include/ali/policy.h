@@ -75,10 +75,13 @@ struct AdaptiveConfig {
 //
 //   Rebuild when read saving + write saving > (1 + margin) * merge cost.
 //
-// One unusual burst cannot cause repeated rebuilds, for three reasons. A leaf
+// What stops an unusual burst from causing rebuilds it does not pay for. A leaf
 // needs min_samples operations before any decision. The margin means savings
-// must clearly exceed the cost. And a rebuild clears the leaf's counters, so
-// the next rebuild has to be earned from zero.
+// must clearly exceed the cost. A rebuild clears the leaf's counters, so each
+// rebuild is earned from zero. Together these bound the work, not the count: a
+// long write burst into a small leaf can earn several cheap merges, but total
+// merge cost stays below the estimated savings. Rebuilds forced by delta_capacity
+// are outside this bound.
 class AdaptivePolicy {
  public:
   struct LeafState {
@@ -91,7 +94,7 @@ class AdaptivePolicy {
   static constexpr bool kSamplesCosts = true;
 
   explicit AdaptivePolicy(AdaptiveConfig config = {})
-      : config_(config),
+      : config_(clamped(config)),
         ns_per_step_(config.ns_per_step),
         ns_per_merged_key_(config.ns_per_merged_key),
         ns_per_shifted_entry_(config.measure_costs ? calibrate_shift_cost()
@@ -164,6 +167,13 @@ class AdaptivePolicy {
   }
 
  private:
+  // A shift of 64 or more bits is undefined, and a half-life that long is
+  // the same as never decaying.
+  static AdaptiveConfig clamped(AdaptiveConfig config) {
+    config.half_life_log2 = std::min(config.half_life_log2, 62U);
+    return config;
+  }
+
   // Times memmove directly, once. Sampling real inserts does not work here: a
   // short insert is mostly fixed overhead, which reads as a per-entry cost many
   // times too high. See docs/RESEARCH.md, failed experiments.
