@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learned index replay</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface: #fcfcfb;
+  --tile: #f6f3ef;
+  --ink: #111511;
+  --body: #444944;
+  --muted: #5a5e5a;
+  --line: #1115111f;
+  --line-strong: #1115114d;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface: #1a1a19;
+    --tile: #232321;
+    --ink: #f0efec;
+    --body: #c3c2b7;
+    --muted: #a3a29a;
+    --line: #f0efec24;
+    --line-strong: #f0efec55;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--body);
+  font: 16px/24px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+main { max-width: 860px; margin: 0 auto; padding: 48px 16px 64px; }
+h1 { color: var(--ink); font-size: 28px; line-height: 34px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.01em; }
+p { margin: 0 0 12px; }
+.lede { max-width: 640px; }
+.panel { background: var(--tile); border-radius: 18px; padding: 16px; margin-top: 20px; }
+.status { min-height: 104px; }
+.step-label { font-size: 13px; line-height: 18px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.step-title { color: var(--ink); font-size: 18px; line-height: 26px; font-weight: 600; margin: 2px 0 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; line-height: 18px; color: var(--muted); margin-bottom: 8px; }
+.legend i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.legend i.dot { width: 8px; height: 8px; border-radius: 50%; }
+svg { display: block; width: 100%; height: auto; }
+.axis { stroke: var(--line-strong); stroke-width: 1; }
+.axis-text { fill: var(--muted); font-size: 12px; }
+.strip-title { font-size: 13px; line-height: 18px; color: var(--muted); margin: 14px 0 6px; font-variant-numeric: tabular-nums; }
+.strip { display: flex; flex-wrap: wrap; gap: 2px; min-height: 22px; }
+.cell { width: 14px; height: 20px; border-radius: 4px; background: var(--line); }
+.cell.probe { background: var(--series-2); }
+.cell.dropped { opacity: 0.35; }
+.cell.hit { background: var(--series-3); }
+.cell.buffered { background: var(--series-2); }
+.cell.merged { background: var(--series-3); }
+.meter { display: grid; grid-template-columns: 150px 1fr 96px; gap: 6px 10px; align-items: center; font-size: 13px; line-height: 18px; margin-top: 12px; color: var(--muted); }
+.bar { height: 10px; border-radius: 4px; background: var(--series-1); width: 0; transition: width 0.3s; }
+.bar.cost { background: var(--series-2); }
+.meter span:nth-child(3n) { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 16px; }
+button {
+  font: inherit; font-size: 14px; color: var(--ink); background: transparent;
+  border: 1px solid var(--line-strong); border-radius: 10px; padding: 6px 14px; cursor: pointer; min-height: 36px;
+}
+button:hover { background: var(--line); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; }
+input[type=range] { flex: 1 1 200px; min-width: 160px; accent-color: var(--series-1); }
+#tip {
+  position: fixed; pointer-events: none; display: none; background: var(--ink); color: var(--surface);
+  border-radius: 8px; padding: 6px 10px; font-size: 12px; line-height: 16px; z-index: 2;
+  font-variant-numeric: tabular-nums;
+}
+table { border-collapse: collapse; width: 100%; font-size: 13px; line-height: 20px; }
+td { padding: 4px 8px 4px 0; border-top: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+td:first-child { color: var(--muted); width: 45%; }
+details { margin-top: 20px; }
+summary { cursor: pointer; color: var(--ink); }
+.source { font-size: 13px; line-height: 20px; color: var(--muted); margin-top: 20px; }
+@media (max-width: 560px) {
+  .meter { grid-template-columns: 110px 1fr 76px; }
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>One query, one burst of inserts, one rebuild</h1>
+  <p class="lede">A learned index guesses where a key sits, then corrects the guess. This page replays a real stretch of a benchmark trace: every key, prediction and decision below was recorded from the run, not drawn by hand.</p>
+
+  <div class="panel status" aria-live="polite">
+    <div class="step-label" id="step-label"></div>
+    <div class="step-title" id="step-title"></div>
+    <p id="step-body"></p>
+  </div>
+
+  <div class="panel">
+    <div class="legend" id="legend"></div>
+    <svg id="chart" viewBox="0 0 820 340" role="img" aria-label="Stored keys in one leaf against their positions, with the linear model"></svg>
+    <div class="strip-title" id="window-title"></div>
+    <div class="strip" id="window-strip"></div>
+    <div class="strip-title" id="delta-title"></div>
+    <div class="strip" id="delta-strip"></div>
+    <div class="meter" id="meter" hidden>
+      <span>Expected saving</span><div><div class="bar" id="saving-bar"></div></div><span id="saving-value"></span>
+      <span>Cost to beat</span><div><div class="bar cost" id="cost-bar"></div></div><span id="cost-value"></span>
+    </div>
+    <div class="controls">
+      <button id="play" type="button">Play</button>
+      <button id="back" type="button" aria-label="Previous step">Back</button>
+      <button id="next" type="button" aria-label="Next step">Next</button>
+      <input id="scrub" type="range" min="0" value="0" aria-label="Replay position">
+    </div>
+  </div>
+
+  <details>
+    <summary>The recorded numbers</summary>
+    <table id="facts"></table>
+  </details>
+  <p class="source" id="source"></p>
+</main>
+<div id="tip"></div>
+<script src="recording.js"></script>
+<script>
+"use strict";
+const R = window.RECORDING;
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => Number(n).toLocaleString("en-US");
+const SVG_NS = "http://www.w3.org/2000/svg";
+const CHART = { width: 820, height: 340, left: 56, right: 12, top: 12, bottom: 38 };
+
+// Keys are 64-bit, so they stay BigInt. Offsets inside one leaf are small enough
+// to draw, and drawing is the only place they become ordinary numbers.
+const firstKey = BigInt(R.leaf_before.first_key);
+const queryKey = BigInt(R.query_key);
+const offset = (key) => Number(BigInt(key) - firstKey);
+
+// The same search as branchless_lower_bound in include/ali/types.h, recording
+// which key each step compares against.
+function searchSteps(keys, count, key) {
+  const steps = [];
+  let lo = 0;
+  let len = count;
+  while (len > 1) {
+    const half = Math.floor(len / 2);
+    const probe = lo + half - 1;
+    const less = keys[probe] < key;
+    steps.push({ probe, lo, len, less });
+    if (less) lo += half;
+    len -= half;
+  }
+  if (len === 1) {
+    steps.push({ probe: lo, lo, len, less: keys[lo] < key });
+    if (keys[lo] < key) lo += 1;
+  }
+  return { steps, answer: lo };
+}
+
+const windowKeys = R.window_keys.map(BigInt);
+const searchedCount = R.query.window_hi - R.window_first_position;
+const search = searchSteps(windowKeys, searchedCount, queryKey);
+
+const leaves = [R.leaf_before];
+const finalLeaves = R.leaf_after;
+const required = (1 + R.rebuild.margin) * R.rebuild.merge_cost_ns;
+
+function buildFrames() {
+  const frames = [];
+  const base = { chart: "before", prediction: false, window: false, position: null, probes: [], buffered: 0, meter: false, merged: false };
+  const add = (fields) => frames.push({ ...base, ...frames[frames.length - 1], ...fields });
+  add({
+    label: `Operation ${fmt(R.meta.query_op)}`,
+    title: `A lookup arrives for key ${R.query_key}`,
+    body: `Routing sends it to one leaf of ${fmt(R.query.base_keys)} sorted keys. The dots are those keys: position against key value.`,
+    wait: 2600,
+  });
+  add({
+    label: "Predict",
+    title: `The model predicts position ${fmt(R.query.predicted)}`,
+    body: "One integer multiply: the distance from the leaf's first key, times a fixed-point slope. No key is ever converted to a float.",
+    prediction: true, wait: 2600,
+  });
+  add({
+    label: "Bound",
+    title: `The answer must be in positions ${fmt(R.query.window_lo)} to ${fmt(R.query.window_hi)}`,
+    body: `This leaf measured its worst errors when it was built: ${R.leaf_before.over} too high and ${R.leaf_before.under} too low. So the search only needs this window.`,
+    window: true, wait: 2600,
+  });
+  const dropped = [];
+  search.steps.forEach((step, index) => {
+    const position = R.window_first_position + step.probe;
+    const key = windowKeys[step.probe];
+    for (let i = step.lo; i < step.lo + step.len; i += 1) {
+      const kept = step.less ? i > step.probe : i <= step.probe;
+      if (!kept) dropped.push(i);
+    }
+    add({
+      label: `Correct, step ${index + 1} of ${search.steps.length}`,
+      title: `Compare with the key at position ${fmt(position)}`,
+      body: step.less ? `${key} is smaller than the query, so the answer is to the right.` : `${key} is not smaller than the query, so the answer is here or to the left.`,
+      probes: [step.probe], dropped: [...dropped], wait: 1500,
+    });
+  });
+  const foundText = R.query.in_base ? "The key is there." : "The key is not stored, so this is where it would go.";
+  add({
+    label: "Verify",
+    title: `Corrected to position ${fmt(R.query.position)}`,
+    body: `The prediction was off by ${Math.abs(R.query.position - R.query.predicted)}. ${foundText} The result is checked against its real neighbours, so a bad model can cost time but never change an answer.`,
+    probes: [], position: R.query.position, wait: 3000,
+  });
+  R.inserts.forEach((insert, index) => {
+    add({
+      label: `Operation ${fmt(insert.op)}`,
+      title: index === 0 ? "Late inserts start landing in this leaf" : `Insert ${index + 1} of ${R.inserts.length}`,
+      body: index === 0
+        ? "They go to a small sorted buffer beside the leaf. The sorted array and its model stay as they are."
+        : `Key ${insert.key} is buffered. The buffer now holds ${insert.delta_keys}.`,
+      window: false, prediction: false, position: null, buffered: insert.delta_keys,
+      wait: index === 0 ? 2200 : 180,
+    });
+  });
+  add({
+    label: `Operation ${fmt(R.meta.rebuild_op)}`,
+    title: "The policy compares two costs",
+    body: `Buffered keys slow down reads and writes. Merging costs a fixed amount of work. Over ${fmt(R.meta.ops_between)} operations this leaf's recent traffic pushed the expected saving past the merge cost plus a safety margin.`,
+    meter: true, buffered: R.rebuild.delta_keys, wait: 3600,
+  });
+  add({
+    label: "Rebuild",
+    title: `${fmt(R.rebuild.base_keys)} keys and ${fmt(R.rebuild.delta_keys)} buffered keys merge into ${R.rebuild.new_leaves === 1 ? "one leaf" : `${R.rebuild.new_leaves} leaves`}`,
+    body: "The inserts bent the curve, so a single line no longer fits within the error limit. The refit draws a line per new leaf and updates routing in the same step.",
+    chart: "after", merged: true, meter: false, wait: 3400,
+  });
+  const landed = R.query_after;
+  add({
+    label: "Same query, new index",
+    title: `The same key now predicts ${fmt(landed.predicted)} and lands at ${fmt(landed.position)}`,
+    body: `It searches a window of ${fmt(landed.window_hi - landed.window_lo)} keys in a leaf of ${fmt(landed.base_keys)}, and its buffer is empty.`,
+    chart: "after", merged: true, afterQuery: true, wait: 4000,
+  });
+  return frames;
+}
+
+const frames = buildFrames();
+let current = 0;
+let timer = null;
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function element(name, attributes, parent) {
+  const node = document.createElementNS(SVG_NS, name);
+  for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, value);
+  parent.appendChild(node);
+  return node;
+}
+
+function chartScale(sets) {
+  let xMax = 1;
+  let yMax = 1;
+  for (const points of sets) {
+    for (const [position, key] of points) {
+      xMax = Math.max(xMax, offset(key));
+      yMax = Math.max(yMax, position);
+    }
+  }
+  const innerWidth = CHART.width - CHART.left - CHART.right;
+  const innerHeight = CHART.height - CHART.top - CHART.bottom;
+  return {
+    x: (value) => CHART.left + (value / xMax) * innerWidth,
+    y: (value) => CHART.top + innerHeight - (value / yMax) * innerHeight,
+    xMax, yMax,
+  };
+}
+
+function drawAxes(svg, scale) {
+  const y0 = CHART.height - CHART.bottom;
+  element("line", { x1: CHART.left, x2: CHART.width - CHART.right, y1: y0, y2: y0, class: "axis" }, svg);
+  element("line", { x1: CHART.left, x2: CHART.left, y1: CHART.top, y2: y0, class: "axis" }, svg);
+  const ticks = [[CHART.left, "first key in leaf", "start"], [CHART.width - CHART.right, `+${fmt(scale.xMax)}`, "end"]];
+  for (const [x, text, anchor] of ticks) {
+    element("text", { x, y: y0 + 18, class: "axis-text", "text-anchor": anchor }, svg).textContent = text;
+  }
+  element("text", { x: (CHART.left + CHART.width) / 2, y: y0 + 32, class: "axis-text", "text-anchor": "middle" }, svg).textContent = "key";
+  element("text", { x: CHART.left - 8, y: y0, class: "axis-text", "text-anchor": "end" }, svg).textContent = "0";
+  element("text", { x: CHART.left - 8, y: CHART.top + 10, class: "axis-text", "text-anchor": "end" }, svg).textContent = fmt(scale.yMax);
+  element("text", { x: 12, y: (CHART.top + y0) / 2, class: "axis-text", "text-anchor": "middle", transform: `rotate(-90 12 ${(CHART.top + y0) / 2})` }, svg).textContent = "position";
+}
+
+function drawLeaf(svg, scale, leaf, positionOffset, color) {
+  const points = leaf.points;
+  const first = points[0];
+  const last = points[points.length - 1];
+  element("line", {
+    x1: scale.x(offset(first[1])), y1: scale.y(first[2] + positionOffset),
+    x2: scale.x(offset(last[1])), y2: scale.y(last[2] + positionOffset),
+    stroke: color, "stroke-width": 2, "stroke-linecap": "round",
+  }, svg);
+  for (const [position, key, predicted] of points) {
+    const shifted = position + positionOffset;
+    const dot = element("circle", { cx: scale.x(offset(key)), cy: scale.y(shifted), r: 2.5, fill: color, "fill-opacity": 0.55 }, svg);
+    dot.dataset.tip = `position ${fmt(shifted)}\nkey ${key}\nmodel says ${fmt(predicted + positionOffset)}`;
+    const hit = element("circle", { cx: dot.getAttribute("cx"), cy: dot.getAttribute("cy"), r: 8, fill: "transparent" }, svg);
+    hit.dataset.tip = dot.dataset.tip;
+  }
+}
+
+function drawChart(frame) {
+  const svg = $("chart");
+  svg.replaceChildren();
+  const series1 = "var(--series-1)";
+  const series2 = "var(--series-2)";
+  const series3 = "var(--series-3)";
+  const after = frame.chart === "after";
+  const scale = chartScale(after ? finalLeaves.map((leaf) => leaf.points) : [R.leaf_before.points]);
+  drawAxes(svg, scale);
+
+  if (frame.window) {
+    const top = scale.y(R.query.window_hi);
+    const bottom = scale.y(R.query.window_lo);
+    element("rect", { x: CHART.left, width: CHART.width - CHART.left - CHART.right, y: top, height: Math.max(bottom - top, 2), fill: series2, "fill-opacity": 0.14 }, svg);
+  }
+  if (after) {
+    let positionOffset = 0;
+    finalLeaves.forEach((leaf, index) => {
+      drawLeaf(svg, scale, leaf, positionOffset, index % 2 === 0 ? series1 : series3);
+      positionOffset += leaf.keys;
+    });
+  } else {
+    drawLeaf(svg, scale, R.leaf_before, 0, series1);
+  }
+
+  const queryX = scale.x(offset(queryKey));
+  const showQuery = frame.prediction || frame.window || frame.position !== null || frame.afterQuery || frame === frames[0];
+  if (showQuery) {
+    element("line", { x1: queryX, x2: queryX, y1: CHART.top, y2: CHART.height - CHART.bottom, stroke: "var(--ink)", "stroke-width": 1, "stroke-dasharray": "3 3" }, svg);
+  }
+  if (frame.prediction && !after) {
+    element("circle", { cx: queryX, cy: scale.y(R.query.predicted), r: 6, fill: series2, stroke: "var(--tile)", "stroke-width": 2 }, svg);
+  }
+  if (frame.position !== null && !after) {
+    element("circle", { cx: queryX, cy: scale.y(frame.position), r: 6, fill: series3, stroke: "var(--tile)", "stroke-width": 2 }, svg);
+  }
+  if (frame.afterQuery) {
+    // Positions in query_after are local to the query's new leaf.
+    const leafIndex = R.query_after.leaf - R.query.leaf;
+    let before = 0;
+    for (let i = 0; i < leafIndex; i += 1) before += finalLeaves[i].keys;
+    element("circle", { cx: queryX, cy: scale.y(before + R.query_after.position), r: 6, fill: series3, stroke: "var(--tile)", "stroke-width": 2 }, svg);
+  }
+}
+
+function drawLegend(frame) {
+  const entries = frame.chart === "after"
+    ? finalLeaves.map((leaf, index) => [`New leaf ${index + 1}: ${fmt(leaf.keys)} keys`, index % 2 === 0 ? "var(--series-1)" : "var(--series-3)", false])
+    : [["Stored keys and model line", "var(--series-1)", false], ["Prediction", "var(--series-2)", true], ["Corrected position", "var(--series-3)", true]];
+  $("legend").replaceChildren(...entries.map(([text, color, dot]) => {
+    const span = document.createElement("span");
+    const swatch = document.createElement("i");
+    if (dot) swatch.className = "dot";
+    swatch.style.background = color;
+    span.append(swatch, text);
+    return span;
+  }));
+}
+
+function drawWindow(frame) {
+  const strip = $("window-strip");
+  strip.replaceChildren();
+  $("window-title").textContent = frame.window
+    ? `Correction window: ${searchedCount} keys from position ${fmt(R.window_first_position)}`
+    : "Correction window: not in use";
+  if (!frame.window) return;
+  const dropped = new Set(frame.dropped || []);
+  for (let i = 0; i < searchedCount; i += 1) {
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    const position = R.window_first_position + i;
+    if (dropped.has(i)) cell.classList.add("dropped");
+    if ((frame.probes || []).includes(i)) cell.classList.add("probe");
+    if (frame.position === position) cell.classList.add("hit");
+    cell.dataset.tip = `position ${fmt(position)}\nkey ${R.window_keys[i]}`;
+    strip.appendChild(cell);
+  }
+}
+
+function drawDelta(frame) {
+  const strip = $("delta-strip");
+  strip.replaceChildren();
+  const count = frame.merged ? 0 : frame.buffered;
+  $("delta-title").textContent = frame.merged
+    ? `Buffer: empty, ${R.rebuild.delta_keys} keys merged`
+    : `Buffer: ${count} of the ${R.rebuild.delta_keys} keys that triggered this rebuild`;
+  for (let i = 0; i < count; i += 1) {
+    const cell = document.createElement("div");
+    cell.className = "cell buffered";
+    strip.appendChild(cell);
+  }
+}
+
+function drawMeter(frame) {
+  const meter = $("meter");
+  meter.hidden = !frame.meter;
+  if (!frame.meter) return;
+  const widest = Math.max(R.rebuild.expected_saving_ns, required);
+  $("saving-bar").style.width = `${(R.rebuild.expected_saving_ns / widest) * 100}%`;
+  $("cost-bar").style.width = `${(required / widest) * 100}%`;
+  $("saving-value").textContent = `${(R.rebuild.expected_saving_ns / 1000).toFixed(1)} µs`;
+  $("cost-value").textContent = `${(required / 1000).toFixed(1)} µs`;
+}
+
+function show(index) {
+  current = Math.max(0, Math.min(index, frames.length - 1));
+  const frame = frames[current];
+  $("step-label").textContent = frame.label;
+  $("step-title").textContent = frame.title;
+  $("step-body").textContent = frame.body;
+  $("scrub").value = String(current);
+  drawLegend(frame);
+  drawChart(frame);
+  drawWindow(frame);
+  drawDelta(frame);
+  drawMeter(frame);
+}
+
+function stop() {
+  clearTimeout(timer);
+  timer = null;
+  $("play").textContent = "Play";
+}
+
+function advance() {
+  if (current >= frames.length - 1) {
+    stop();
+    return;
+  }
+  show(current + 1);
+  timer = setTimeout(advance, frames[current].wait);
+}
+
+function play() {
+  if (timer !== null) {
+    stop();
+    return;
+  }
+  if (current >= frames.length - 1) show(0);
+  $("play").textContent = "Pause";
+  timer = setTimeout(advance, frames[current].wait);
+}
+
+$("scrub").max = String(frames.length - 1);
+$("play").addEventListener("click", play);
+$("next").addEventListener("click", () => { stop(); show(current + 1); });
+$("back").addEventListener("click", () => { stop(); show(current - 1); });
+$("scrub").addEventListener("input", (event) => { stop(); show(Number(event.target.value)); });
+document.addEventListener("keydown", (event) => {
+  if (event.target.tagName === "BUTTON" || event.target.tagName === "INPUT") return;
+  if (event.key === " ") { event.preventDefault(); play(); }
+  if (event.key === "ArrowRight") { stop(); show(current + 1); }
+  if (event.key === "ArrowLeft") { stop(); show(current - 1); }
+});
+
+const tip = $("tip");
+document.addEventListener("mousemove", (event) => {
+  const text = event.target.dataset ? event.target.dataset.tip : null;
+  if (!text) { tip.style.display = "none"; return; }
+  tip.style.display = "block";
+  tip.style.whiteSpace = "pre";
+  tip.textContent = text;
+  tip.style.left = `${Math.min(event.clientX + 12, window.innerWidth - tip.offsetWidth - 8)}px`;
+  tip.style.top = `${event.clientY + 12}px`;
+});
+
+const facts = [
+  ["Query key", R.query_key],
+  ["Predicted position", fmt(R.query.predicted)],
+  ["Window", `${fmt(R.query.window_lo)} to ${fmt(R.query.window_hi)}`],
+  ["True position", fmt(R.query.position)],
+  ["Leaf keys before", fmt(R.rebuild.base_keys)],
+  ["Buffered keys at rebuild", fmt(R.rebuild.delta_keys)],
+  ["Rebuild triggered by", `a ${R.rebuild.trigger}`],
+  ["Expected saving", `${R.rebuild.expected_saving_ns.toFixed(0)} ns`],
+  ["Merge cost", `${R.rebuild.merge_cost_ns.toFixed(0)} ns`],
+  ["Margin", String(R.rebuild.margin)],
+  ["Leaves after", String(R.rebuild.new_leaves)],
+  ["Reads between query and rebuild", fmt(R.rebuild.reads_between)],
+];
+$("facts").replaceChildren(...facts.map(([name, value]) => {
+  const row = document.createElement("tr");
+  const left = document.createElement("td");
+  const right = document.createElement("td");
+  left.textContent = name;
+  right.textContent = value;
+  row.append(left, right);
+  return row;
+}));
+
+$("source").textContent = `Recorded from ${R.meta.dataset}, stride ${R.meta.stride}, workload ${R.meta.workload}, seed ${R.meta.seed}, ${fmt(R.meta.ops)} operations. Trace digest ${R.meta.trace_digest}. Costs are frozen so the recording is reproducible.`;
+
+show(0);
+if (!reducedMotion) play();
+</script>
+</body>
+</html>
