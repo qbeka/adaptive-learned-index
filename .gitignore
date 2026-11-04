@@ -6,10 +6,9 @@ third_party/*
 !third_party/PINS
 !third_party/patches/
 
-# Large inputs and raw benchmark output. Hashes live in run manifests.
+# Large inputs. Their hashes live in run manifests.
 data/*
 !data/README.md
-results/raw/
 
 # Python
 .venv/

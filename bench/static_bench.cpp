@@ -3,6 +3,7 @@
 //
 // Usage: static_bench --dataset PATH --index binary|ali|pgm --epsilon N
 //                     [--stride N] [--lookups N] [--passes N] [--latency N]
+//                     [--seed N]
 #include <cinttypes>
 #include <cstdio>
 #include <string>
@@ -27,6 +28,7 @@ struct Options {
   std::size_t lookups = 10'000'000;
   std::size_t passes = 3;           // Lookup passes; the last one is reported.
   std::size_t latency_samples = 1'000'000;
+  std::uint64_t seed = 42;          // 42 is the seed SOSD itself uses.
 };
 
 struct Footprint {
@@ -98,7 +100,7 @@ template <class Index>
 int run(Index& index, const Options& options) {
   prefer_performance_cores();
   const Dataset dataset = make_dataset(load_sosd_keys(options.dataset, options.stride));
-  const std::vector<Entry> lookups = sosd_equality_lookups(dataset, options.lookups);
+  const std::vector<Entry> lookups = sosd_equality_lookups(dataset, options.lookups, options.seed);
 
   const std::uint64_t build_start = now_ns();
   index.bulk_load(dataset.entries);
@@ -198,6 +200,7 @@ int main(int argc, char** argv) {
     else if (flag == "--lookups") options.lookups = std::stoull(value);
     else if (flag == "--passes") options.passes = std::stoull(value);
     else if (flag == "--latency") options.latency_samples = std::stoull(value);
+    else if (flag == "--seed") options.seed = std::stoull(value);
     else {
       std::fprintf(stderr, "unknown flag %s\n", flag.c_str());
       return 2;

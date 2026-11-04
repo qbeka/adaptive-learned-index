@@ -1,0 +1,16 @@
+{
+  "name": "smoke_static",
+  "binary": "static_bench",
+  "max_load": 1000,
+  "seeds": [42],
+  "matrix": {
+    "dataset": ["data/sosd/wiki_ts_200M_uint64"],
+    "stride": [256],
+    "lookups": [100000]
+  },
+  "indexes": [
+    {"label": "binary", "args": ["--index", "binary"]},
+    {"label": "ali_e64", "args": ["--index", "ali", "--epsilon", "64"]},
+    {"label": "pgm_e64", "args": ["--index", "pgm", "--epsilon", "64"]}
+  ]
+}
