@@ -213,6 +213,14 @@ void check_adaptive_decision_moves_the_right_way() {
   CHECK(read_part_with_refill < policy.expected_saving_ns(state, small));
 }
 
+// A compiler once deleted the calibration loop and this measured zero, which
+// silently removed write costs from every decision.
+void check_shift_cost_calibration_measures_something() {
+  const AdaptivePolicy policy{AdaptiveConfig{}};
+  CHECK(policy.ns_per_shifted_entry() > 0.001);
+  CHECK(policy.ns_per_shifted_entry() < 100.0);
+}
+
 // The hysteresis promise: after a rebuild the counters are clear, so a single
 // burst cannot pay for a second rebuild. The loop alternates a small write burst
 // and an equally small read burst, then bounds what the policy spent.
@@ -349,6 +357,7 @@ int main() {
   check_adaptive_ignores_reads_that_skip_the_delta();
   check_adaptive_rebuilds_a_leaf_with_a_hot_delta();
   check_adaptive_decision_moves_the_right_way();
+  check_shift_cost_calibration_measures_something();
   check_adaptive_does_not_thrash_on_repeated_bursts();
   check_traces_match_the_oracle();
   check_adaptive_traces_match_the_oracle();

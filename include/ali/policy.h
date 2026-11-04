@@ -175,13 +175,12 @@ class AdaptivePolicy {
     const auto start = std::chrono::steady_clock::now();
     for (int round = 0; round < kRounds; ++round) {
       std::memmove(words.data() + 2, words.data(), 2 * kEntries * sizeof(std::uint64_t));
-      words[0] += 1;
+      // Tells the compiler the array is observed, or it deletes the memmove.
+      asm volatile("" : : "r"(words.data()) : "memory");
     }
     const auto spent = std::chrono::steady_clock::now() - start;
     const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(spent).count();
-    // Reading words keeps the compiler from removing the loop.
-    const double shifted = static_cast<double>(kRounds) * kEntries;
-    return static_cast<double>(ns) / shifted + (words[0] == 0 ? 1.0 : 0.0);
+    return static_cast<double>(ns) / (static_cast<double>(kRounds) * kEntries);
   }
 
   // Exponential moving average with weight 1/8: recent enough to follow the
