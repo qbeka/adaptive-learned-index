@@ -348,9 +348,8 @@ function drawChart(frame) {
   }
   if (frame.afterQuery) {
     // Positions in query_after are local to the query's new leaf.
-    const leafIndex = R.query_after.leaf - R.query.leaf;
     let before = 0;
-    for (let i = 0; i < leafIndex; i += 1) before += finalLeaves[i].keys;
+    for (let i = 0; i < R.query_after_leaf_offset; i += 1) before += finalLeaves[i].keys;
     element("circle", { cx: queryX, cy: scale.y(before + R.query_after.position), r: 6, fill: series3, stroke: "var(--tile)", "stroke-width": 2 }, svg);
   }
 }

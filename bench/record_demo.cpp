@@ -265,10 +265,12 @@ int main(int argc, char** argv) {
                event.new_leaves, event.expected_saving_ns, event.merge_cost_ns,
                options.margin, reads_between);
   const LookupTrace after = index.explain_lookup(query_key);
-  std::fputs("\"query_after\":", out);
+  // Leaf numbers shift when other leaves split, so the page gets an offset into
+  // the new leaves, not an absolute number.
+  const std::size_t first_new = index.explain_lookup(leaf_lo).leaf;
+  std::fprintf(out, "\"query_after_leaf_offset\":%zu,\n\"query_after\":", after.leaf - first_new);
   print_lookup(out, after);
   std::fputs(",\n\"leaf_after\":[", out);
-  const std::size_t first_new = index.explain_lookup(leaf_lo).leaf;
   for (std::size_t i = 0; i < event.new_leaves; ++i) {
     if (i > 0) std::fputc(',', out);
     print_leaf(out, index, first_new + i);
