@@ -92,6 +92,15 @@ class StaticIndex {
     return widest;
   }
 
+  // The segment whose range holds `key`. Public so the profiler can time routing
+  // on its own.
+  std::size_t route(Key key) const {
+    const std::size_t after =
+        branchless_lower_bound(first_keys_.data(), first_keys_.size(), key);
+    if (after < first_keys_.size() && first_keys_[after] == key) return after;
+    return after > 0 ? after - 1 : 0;
+  }
+
   // Test hook: makes every error bound wrong, so that tests can show a bad model
   // costs time and never changes an answer.
   void corrupt_error_bounds_for_test() {
@@ -129,13 +138,7 @@ class StaticIndex {
   // Global position of the first key >= `key`.
   std::size_t position(Key key) const {
     if (first_keys_.empty()) return 0;
-    // The segment that could hold `key` is the last one starting at or below it.
-    const std::size_t after =
-        branchless_lower_bound(first_keys_.data(), first_keys_.size(), key);
-    const std::size_t index =
-        after < first_keys_.size() && first_keys_[after] == key ? after
-        : after > 0                                             ? after - 1
-                                                                : 0;
+    const std::size_t index = route(key);
     const SegmentRecord& record = segments_[index];
     const std::size_t end = index + 1 < segments_.size()
                                 ? segments_[index + 1].begin
