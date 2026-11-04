@@ -3,9 +3,12 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 namespace ali {
 
@@ -56,7 +59,7 @@ struct AdaptiveConfig {
   bool measure_costs = true;
   double ns_per_step = 20.0;           // One binary search step in a delta.
   double ns_per_merged_key = 10.0;     // Merging and refitting one key.
-  double ns_per_shifted_entry = 0.5;   // Moving one entry during a delta insert.
+  double ns_per_shifted_entry = 0.5;   // Moving one entry in a delta insert.
 };
 
 // Rebuilds a leaf when the work its buffer will cause exceeds the cost of
@@ -91,7 +94,8 @@ class AdaptivePolicy {
       : config_(config),
         ns_per_step_(config.ns_per_step),
         ns_per_merged_key_(config.ns_per_merged_key),
-        ns_per_shifted_entry_(config.ns_per_shifted_entry) {}
+        ns_per_shifted_entry_(config.measure_costs ? calibrate_shift_cost()
+                                                   : config.ns_per_shifted_entry) {}
 
   void on_delta_read(LeafState& state) {
     ++events_;
@@ -121,7 +125,7 @@ class AdaptivePolicy {
     return (state.reads & 15U) == 0 && worth_rebuilding(state, leaf);
   }
 
-  // Sampling: one operation in 256 is timed, because a clock read costs about
+  // Sampling: one delta read in 256 is timed, because a clock read costs about
   // as much as the operation.
   bool should_sample() {
     return config_.measure_costs && (++sample_tick_ & 255U) == 0;
@@ -130,13 +134,6 @@ class AdaptivePolicy {
   void on_read_sample(std::uint64_t ns, std::uint64_t steps) {
     if (steps > 0) {
       blend(ns_per_step_, static_cast<double>(ns) / static_cast<double>(steps));
-    }
-  }
-
-  void on_write_sample(std::uint64_t ns, std::uint64_t shifted) {
-    // A short shift is all clock noise, so only long ones are informative.
-    if (shifted >= 64) {
-      blend(ns_per_shifted_entry_, static_cast<double>(ns) / static_cast<double>(shifted));
     }
   }
 
@@ -167,6 +164,26 @@ class AdaptivePolicy {
   }
 
  private:
+  // Times memmove directly, once. Sampling real inserts does not work here: a
+  // short insert is mostly fixed overhead, which reads as a per-entry cost many
+  // times too high. See docs/RESEARCH.md, failed experiments.
+  static double calibrate_shift_cost() {
+    constexpr std::size_t kEntries = 2048;
+    constexpr int kRounds = 64;
+    static_assert(sizeof(std::uint64_t) * 2 == 16);
+    std::array<std::uint64_t, 2 * (kEntries + 1)> words{};
+    const auto start = std::chrono::steady_clock::now();
+    for (int round = 0; round < kRounds; ++round) {
+      std::memmove(words.data() + 2, words.data(), 2 * kEntries * sizeof(std::uint64_t));
+      words[0] += 1;
+    }
+    const auto spent = std::chrono::steady_clock::now() - start;
+    const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(spent).count();
+    // Reading words keeps the compiler from removing the loop.
+    const double shifted = static_cast<double>(kRounds) * kEntries;
+    return static_cast<double>(ns) / shifted + (words[0] == 0 ? 1.0 : 0.0);
+  }
+
   // Exponential moving average with weight 1/8: recent enough to follow the
   // machine, smooth enough that one slow sample does not swing a decision.
   static void blend(double& average, double sample) {

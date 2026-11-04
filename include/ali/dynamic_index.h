@@ -154,9 +154,9 @@ class DynamicIndex {
       leaf.delta[at].value = value;
       return false;
     }
-    const std::size_t shifted = leaf.delta.size() - at;
-    if constexpr (kInstrumented) work_.delta_shifted += shifted;
-    insert_into_delta(leaf, at, Entry{key, value}, shifted);
+    if constexpr (kInstrumented) work_.delta_shifted += leaf.delta.size() - at;
+    leaf.delta.insert(leaf.delta.begin() + static_cast<std::ptrdiff_t>(at),
+                      Entry{key, value});
     ++size_;
     policy_.on_write(leaf.state);
     const bool forced = leaf.delta.size() >= config_.delta_capacity;
@@ -383,20 +383,6 @@ class DynamicIndex {
       }
     }
     return delta_position(leaf, key);
-  }
-
-  void insert_into_delta(Leaf& leaf, std::size_t at, const Entry& entry,
-                         std::size_t shifted) {
-    const auto position = leaf.delta.begin() + static_cast<std::ptrdiff_t>(at);
-    if constexpr (Policy::kSamplesCosts) {
-      if (policy_.should_sample()) [[unlikely]] {
-        const auto start = std::chrono::steady_clock::now();
-        leaf.delta.insert(position, entry);
-        policy_.on_write_sample(elapsed_ns(start), shifted);
-        return;
-      }
-    }
-    leaf.delta.insert(position, entry);
   }
 
   static std::uint64_t elapsed_ns(std::chrono::steady_clock::time_point start) {
