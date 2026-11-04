@@ -9,6 +9,7 @@
 //                     --mode throughput|latency|memory [--stride N] [--ops N]
 //                     [--seed N] [--threshold N] [--margin X] [--half-life N]
 //                     [--epsilon N] [--max-leaf N] [--delta-cap N]
+//                     [--seal-tail 0|1]
 #include <malloc/malloc.h>
 
 #include <cinttypes>
@@ -74,6 +75,7 @@ struct Options {
   std::uint64_t epsilon = 64;
   std::size_t max_leaf = std::size_t{1} << 14;
   std::size_t delta_capacity = 4096;
+  bool seal_tail = false;
 };
 
 template <int kLeafSlots>
@@ -282,12 +284,12 @@ void print_policy_fields(const Index& adapter) {
     const RebuildStats& stats = index.stats();
     const MemoryReport memory = index.memory();
     std::printf(",\"rebuilds\":%" PRIu64 ",\"forced_rebuilds\":%" PRIu64
-                ",\"splits\":%" PRIu64 ",\"keys_merged\":%" PRIu64
+                ",\"seals\":%" PRIu64 ",\"splits\":%" PRIu64 ",\"keys_merged\":%" PRIu64
                 ",\"bytes_moved\":%" PRIu64 ",\"rebuild_ns\":%" PRIu64
                 ",\"worst_rebuild_ns\":%" PRIu64 ",\"leaves\":%zu"
                 ",\"widened\":%" PRIu64 ",\"delta_bytes\":%zu,\"directory_bytes\":%zu"
                 ",\"model_bytes\":%zu,\"capacity_bytes\":%zu",
-                stats.rebuilds, stats.forced_rebuilds, stats.splits,
+                stats.rebuilds, stats.forced_rebuilds, stats.seals, stats.splits,
                 stats.keys_merged, stats.bytes_moved, stats.total_ns,
                 stats.worst_ns, index.leaf_count(), index.widened_searches(),
                 memory.deltas, memory.directory, memory.models, memory.capacity);
@@ -366,6 +368,7 @@ int main(int argc, char** argv) {
     else if (flag == "--epsilon") options.epsilon = std::stoull(value);
     else if (flag == "--max-leaf") options.max_leaf = std::stoull(value);
     else if (flag == "--delta-cap") options.delta_capacity = std::stoull(value);
+    else if (flag == "--seal-tail") options.seal_tail = value == "1";
     else {
       std::fprintf(stderr, "unknown flag %s\n", flag.c_str());
       return 2;
@@ -389,6 +392,7 @@ int main(int argc, char** argv) {
   config.epsilon = options.epsilon;
   config.max_leaf_keys = options.max_leaf;
   config.delta_capacity = options.delta_capacity;
+  config.seal_tail_appends = options.seal_tail;
 
   if (options.index == "btree16") {
     BtreeAdapter<16> index;

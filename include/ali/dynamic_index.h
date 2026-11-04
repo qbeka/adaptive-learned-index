@@ -42,12 +42,16 @@ struct DynamicConfig {
   std::size_t max_leaf_keys = std::size_t{1} << 14;
   // A delta buffer never grows past this, whatever the policy says.
   std::size_t delta_capacity = 4096;
+  // When every buffered key lies past the base, turn the buffer into new leaves
+  // and leave the base untouched. See docs/RESEARCH.md for the measurement.
+  bool seal_tail_appends = false;
 };
 
 // Rebuild accounting is always on: rebuilds are rare and already expensive.
 struct RebuildStats {
   std::uint64_t rebuilds = 0;
   std::uint64_t forced_rebuilds = 0;  // Reached delta_capacity.
+  std::uint64_t seals = 0;            // Rebuilds that left the base untouched.
   std::uint64_t splits = 0;           // Extra leaves created.
   std::uint64_t keys_merged = 0;
   std::uint64_t bytes_moved = 0;      // Merged entries plus directory shifts.
@@ -424,6 +428,11 @@ class DynamicIndex {
   void rebuild(std::size_t index) {
     const auto start = std::chrono::steady_clock::now();
     Leaf& old_leaf = *leaves_[index];
+    if (config_.seal_tail_appends && !old_leaf.keys.empty() &&
+        old_leaf.delta.front().key > old_leaf.keys.back()) {
+      seal_tail(index, start);
+      return;
+    }
     const std::size_t merged_size = old_leaf.keys.size() + old_leaf.delta.size();
 
     std::vector<Key> keys;
@@ -461,12 +470,53 @@ class DynamicIndex {
       stats_.splits += extra;
     }
 
-    policy_.reset(leaves_[index]->state);
+    for (std::size_t i = 0; i <= extra; ++i) policy_.reset(leaves_[index + i]->state);
     const std::uint64_t ns = elapsed_ns(start);
     policy_.on_rebuild(merged_size, ns);
     ++stats_.rebuilds;
     stats_.keys_merged += merged_size;
     stats_.bytes_moved += merged_size * sizeof(Entry);
+    stats_.total_ns += ns;
+    stats_.worst_ns = std::max(stats_.worst_ns, ns);
+  }
+
+  // The delta holds only keys past the base, so the base can stay as it is and
+  // the buffer alone becomes one or more new leaves after it.
+  void seal_tail(std::size_t index,
+                 std::chrono::steady_clock::time_point start) {
+    Leaf& leaf = *leaves_[index];
+    const std::size_t count = leaf.delta.size();
+    std::vector<Key> keys;
+    std::vector<Value> values;
+    keys.reserve(count);
+    values.reserve(count);
+    for (const Entry& entry : leaf.delta) {
+      keys.push_back(entry.key);
+      values.push_back(entry.value);
+    }
+    std::vector<std::unique_ptr<Leaf>> fresh;
+    std::vector<Key> fresh_first_keys;
+    append_fitted_leaves(keys, values, fresh, fresh_first_keys);
+
+    const std::size_t tail = leaves_.size() - index - 1;
+    std::vector<Entry>().swap(leaf.delta);  // Assigning {} would keep the capacity.
+    policy_.reset(leaf.state);
+    const auto after = static_cast<std::ptrdiff_t>(index) + 1;
+    leaves_.insert(leaves_.begin() + after, std::make_move_iterator(fresh.begin()),
+                   std::make_move_iterator(fresh.end()));
+    first_keys_.insert(first_keys_.begin() + after, fresh_first_keys.begin(),
+                       fresh_first_keys.end());
+    for (std::size_t i = 0; i < fresh.size(); ++i) {
+      policy_.reset(leaves_[index + 1 + i]->state);
+    }
+
+    const std::uint64_t ns = elapsed_ns(start);
+    policy_.on_rebuild(count, ns);
+    ++stats_.rebuilds;
+    ++stats_.seals;
+    stats_.splits += fresh.size();
+    stats_.keys_merged += count;
+    stats_.bytes_moved += count * sizeof(Entry) + tail * (sizeof(Key) + sizeof(void*));
     stats_.total_ns += ns;
     stats_.worst_ns = std::max(stats_.worst_ns, ns);
   }

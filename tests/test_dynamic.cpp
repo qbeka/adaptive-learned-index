@@ -213,6 +213,27 @@ void check_adaptive_decision_moves_the_right_way() {
   CHECK(read_part_with_refill < policy.expected_saving_ns(state, small));
 }
 
+// Sealing must leave the base alone, and every key must stay reachable.
+void check_seal_keeps_appended_keys_and_skips_the_merge() {
+  DynamicConfig config;
+  config.max_leaf_keys = 1 << 12;
+  config.seal_tail_appends = true;
+  FixedIndex index(config, FixedPolicy(32));
+  index.bulk_load(even_keys(1 << 10));
+  const Key start = 2 << 10;
+  for (Key i = 0; i < 1024; ++i) index.insert_or_assign(start + i * 2, i);
+  index.check_invariants();
+  CHECK(index.stats().seals > 0);
+  CHECK(index.stats().keys_merged <= 1024);  // Only the appended keys moved.
+  CHECK(index.lookup(start + 2 * 1023) == Value{1023});
+  CHECK(index.lower_bound(start + 1)->key == start + 2);
+  CHECK(index.rank(start) == 1 << 10);
+  // A sealed leaf gives its buffer back. Keeping the capacity once cost 5 bytes
+  // per key on the append workload.
+  const MemoryReport memory = index.memory();
+  CHECK(memory.capacity < memory.total_used() + 64 * sizeof(Entry) + 8192);
+}
+
 // A compiler once deleted the calibration loop and this measured zero, which
 // silently removed write costs from every decision.
 void check_shift_cost_calibration_measures_something() {
@@ -285,12 +306,19 @@ void check_traces_match_the_oracle() {
           config.ops = 3000;
           config.space = space;
           const Trace trace = generate_trace(config);
-          FixedIndex index = make_index(shape.epsilon, shape.max_leaf, shape.threshold);
-          ops += replay_with_invariant_checks(index, trace);
-          CHECK(index.widened_searches() == 0);
-          rebuilds += index.stats().rebuilds;
-          splits += index.stats().splits;
-          ++traces;
+          for (bool seal : {false, true}) {
+            DynamicConfig dynamic;
+            dynamic.epsilon = shape.epsilon;
+            dynamic.max_leaf_keys = shape.max_leaf;
+            dynamic.delta_capacity = std::max<std::size_t>(shape.threshold + 1, 8);
+            dynamic.seal_tail_appends = seal;
+            FixedIndex index(dynamic, FixedPolicy(shape.threshold));
+            ops += replay_with_invariant_checks(index, trace);
+            CHECK(index.widened_searches() == 0);
+            rebuilds += index.stats().rebuilds;
+            splits += index.stats().splits;
+            ++traces;
+          }
         }
       }
     }
@@ -358,6 +386,7 @@ int main() {
   check_adaptive_rebuilds_a_leaf_with_a_hot_delta();
   check_adaptive_decision_moves_the_right_way();
   check_shift_cost_calibration_measures_something();
+  check_seal_keeps_appended_keys_and_skips_the_merge();
   check_adaptive_does_not_thrash_on_repeated_bursts();
   check_traces_match_the_oracle();
   check_adaptive_traces_match_the_oracle();
