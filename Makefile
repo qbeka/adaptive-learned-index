@@ -17,7 +17,7 @@ TOOL_BINS := $(patsubst tools/%.cpp,$(BUILD)/%,$(wildcard tools/*.cpp))
 BENCH_BINS := $(patsubst bench/%.cpp,$(BUILD)/%,$(wildcard bench/*.cpp))
 
 # Baselines are third-party code, so they are -isystem to keep our warnings ours.
-BASELINE_INCLUDES := -Ibench -isystem third_party/PGM-index/include -isystem third_party/tlx -isystem third_party/ALEX-arm64
+BASELINE_INCLUDES := -Ibench -isystem third_party/PGM-index/include -isystem third_party/tlx -isystem third_party/ALEX-arm64 -isystem third_party/ALEX-arm64/src/core
 
 .PHONY: all test tools bench sanitize smoke clean help
 

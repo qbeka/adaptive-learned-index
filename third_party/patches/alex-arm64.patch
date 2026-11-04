@@ -1,0 +1,16 @@
+--- a/src/core/alex_base.h
++++ b/src/core/alex_base.h
+@@ -378,9 +378,13 @@
+ #ifdef _WIN32
+     __cpuidex((int*)regs, (int)i, (int)j);
+ #else
++#if defined(__x86_64__)
+     asm volatile("cpuid"
+                  : "=a"(regs[0]), "=b"(regs[1]), "=c"(regs[2]), "=d"(regs[3])
+                  : "a"(i), "c"(j));
++#else
++    regs[0] = regs[1] = regs[2] = regs[3] = 0;
++#endif
+ #endif
+   }
+ 
