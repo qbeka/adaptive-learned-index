@@ -264,9 +264,9 @@ function chartScale(sets) {
   let xMax = 1;
   let yMax = 1;
   for (const points of sets) {
-    for (const [position, key] of points) {
+    for (const [position, key, predicted] of points) {
       xMax = Math.max(xMax, offset(key));
-      yMax = Math.max(yMax, position);
+      yMax = Math.max(yMax, position, predicted);
     }
   }
   const innerWidth = CHART.width - CHART.left - CHART.right;
