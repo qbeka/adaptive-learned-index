@@ -23,6 +23,7 @@ import json
 import os
 import platform
 import random
+import shutil
 import subprocess
 import sys
 import time
@@ -91,8 +92,17 @@ def wait_for_quiet(max_load: float) -> float:
         time.sleep(POLL_SECONDS)
 
 
-def command_for(spec: dict, cell: dict, replicate: int) -> list[str]:
-    command = [str(ROOT / "build" / "release" / spec["binary"])]
+def snapshot_binary(spec: dict) -> Path:
+    """Copies the benchmark so later rebuilds cannot change a run in progress."""
+    target = ROOT / "build" / "runs" / spec["name"] / spec["binary"]
+    if not target.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / "build" / "release" / spec["binary"], target)
+    return target
+
+
+def command_for(spec: dict, cell: dict, replicate: int, binary: Path) -> list[str]:
+    command = [str(binary)]
     for name, value in cell.items():
         if name in ("label", "args"):
             continue
@@ -140,6 +150,7 @@ def main() -> int:
     spec = json.loads(spec_path.read_text())
     max_load = args.max_load if args.max_load is not None else spec.get("max_load", 8.0)
     subprocess.run(["make", "bench", "tools"], cwd=ROOT, check=True, capture_output=True)
+    binary = snapshot_binary(spec)
 
     run_dir = ROOT / "results" / spec["name"]
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -165,7 +176,7 @@ def main() -> int:
                     continue
                 load_before = wait_for_quiet(max_load)
                 started = time.time()
-                command = command_for(spec, cell, replicate)
+                command = command_for(spec, cell, replicate, binary)
                 completed = subprocess.run(command, capture_output=True, text=True, cwd=ROOT)
                 if completed.returncode != 0:
                     print(completed.stderr, file=sys.stderr)

@@ -1,0 +1,557 @@
+{
+  "name": "update_validation",
+  "binary": "update_bench",
+  "max_load": 14,
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "matrix": {
+    "dataset": [
+      "data/sosd/wiki_ts_200M_uint64"
+    ],
+    "stride": [
+      8
+    ],
+    "ops": [
+      20000000
+    ],
+    "workload": [
+      "read_heavy",
+      "write_heavy",
+      "append_only",
+      "shifting_hotspot"
+    ],
+    "mode": [
+      "throughput"
+    ]
+  },
+  "indexes": [
+    {
+      "label": "fixed_e8_t16",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "16",
+        "--epsilon",
+        "8",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e8_t64",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "64",
+        "--epsilon",
+        "8",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e8_t256",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "256",
+        "--epsilon",
+        "8",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e8_t1024",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "1024",
+        "--epsilon",
+        "8",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e8_t2048",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "2048",
+        "--epsilon",
+        "8",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e8_t4095",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "4095",
+        "--epsilon",
+        "8",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e8_m0_h18",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "0",
+        "--half-life",
+        "18",
+        "--epsilon",
+        "8",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e8_m0_h22",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "0",
+        "--half-life",
+        "22",
+        "--epsilon",
+        "8",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e8_m1_h18",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "1",
+        "--half-life",
+        "18",
+        "--epsilon",
+        "8",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e8_m1_h22",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "1",
+        "--half-life",
+        "22",
+        "--epsilon",
+        "8",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e8_m4_h18",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "4",
+        "--half-life",
+        "18",
+        "--epsilon",
+        "8",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e8_m4_h22",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "4",
+        "--half-life",
+        "22",
+        "--epsilon",
+        "8",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e16_t16",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "16",
+        "--epsilon",
+        "16",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e16_t64",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "64",
+        "--epsilon",
+        "16",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e16_t256",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "256",
+        "--epsilon",
+        "16",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e16_t1024",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "1024",
+        "--epsilon",
+        "16",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e16_t2048",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "2048",
+        "--epsilon",
+        "16",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e16_t4095",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "4095",
+        "--epsilon",
+        "16",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e16_m0_h18",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "0",
+        "--half-life",
+        "18",
+        "--epsilon",
+        "16",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e16_m0_h22",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "0",
+        "--half-life",
+        "22",
+        "--epsilon",
+        "16",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e16_m1_h18",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "1",
+        "--half-life",
+        "18",
+        "--epsilon",
+        "16",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e16_m1_h22",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "1",
+        "--half-life",
+        "22",
+        "--epsilon",
+        "16",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e16_m4_h18",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "4",
+        "--half-life",
+        "18",
+        "--epsilon",
+        "16",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e16_m4_h22",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "4",
+        "--half-life",
+        "22",
+        "--epsilon",
+        "16",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e32_t16",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "16",
+        "--epsilon",
+        "32",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e32_t64",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "64",
+        "--epsilon",
+        "32",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e32_t256",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "256",
+        "--epsilon",
+        "32",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e32_t1024",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "1024",
+        "--epsilon",
+        "32",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e32_t2048",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "2048",
+        "--epsilon",
+        "32",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e32_t4095",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "4095",
+        "--epsilon",
+        "32",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e32_m0_h18",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "0",
+        "--half-life",
+        "18",
+        "--epsilon",
+        "32",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e32_m0_h22",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "0",
+        "--half-life",
+        "22",
+        "--epsilon",
+        "32",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e32_m1_h18",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "1",
+        "--half-life",
+        "18",
+        "--epsilon",
+        "32",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e32_m1_h22",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "1",
+        "--half-life",
+        "22",
+        "--epsilon",
+        "32",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e32_m4_h18",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "4",
+        "--half-life",
+        "18",
+        "--epsilon",
+        "32",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e32_m4_h22",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "4",
+        "--half-life",
+        "22",
+        "--epsilon",
+        "32",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "btree16",
+      "args": [
+        "--index",
+        "btree16"
+      ]
+    },
+    {
+      "label": "btree64",
+      "args": [
+        "--index",
+        "btree64"
+      ]
+    },
+    {
+      "label": "btree256",
+      "args": [
+        "--index",
+        "btree256"
+      ]
+    }
+  ]
+}
