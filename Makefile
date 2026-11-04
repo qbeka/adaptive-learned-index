@@ -14,12 +14,18 @@ CXXFLAGS := $(CXXFLAGS_BASE) $(CXXFLAGS_$(MODE))
 TEST_SOURCES := $(wildcard tests/test_*.cpp)
 TEST_BINS := $(patsubst tests/%.cpp,$(BUILD)/%,$(TEST_SOURCES))
 TOOL_BINS := $(patsubst tools/%.cpp,$(BUILD)/%,$(wildcard tools/*.cpp))
+BENCH_BINS := $(patsubst bench/%.cpp,$(BUILD)/%,$(wildcard bench/*.cpp))
 
-.PHONY: all test tools sanitize smoke clean help
+# Baselines are third-party code, so they are -isystem to keep our warnings ours.
+BASELINE_INCLUDES := -Ibench -isystem third_party/PGM-index/include -isystem third_party/tlx -isystem third_party/ALEX-arm64
+
+.PHONY: all test tools bench sanitize smoke clean help
 
 all: tools $(TEST_BINS)
 
 tools: $(TOOL_BINS)
+
+bench: $(BENCH_BINS)
 
 test: $(TEST_BINS) $(TOOL_BINS)
 	@for t in $(TEST_BINS); do echo "== $$t"; $$t || exit 1; done
@@ -47,5 +53,9 @@ $(BUILD)/test_%: tests/test_%.cpp
 $(BUILD)/%: tools/%.cpp
 	@mkdir -p $(BUILD)
 	$(CXX) $(CXXFLAGS) $< -o $@
+
+$(BUILD)/%: bench/%.cpp
+	@mkdir -p $(BUILD)
+	$(CXX) $(CXXFLAGS) $(BASELINE_INCLUDES) $< -o $@
 
 -include $(wildcard $(BUILD)/*.d)
