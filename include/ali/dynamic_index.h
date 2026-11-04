@@ -113,12 +113,12 @@ class DynamicIndex {
     if (leaf.delta.empty()) return std::nullopt;
 
     // Only here does a read pay for the buffer.
-    const std::size_t at = delta_position(leaf, key);
+    const std::size_t at = sampled_delta_position(leaf, key);
     std::optional<Value> result;
     if (at < leaf.delta.size() && leaf.delta[at].key == key) {
       result = leaf.delta[at].value;
     }
-    policy_.on_delta_read(leaf.state, delta_steps(leaf));
+    policy_.on_delta_read(leaf.state);
     maybe_rebuild_after_read(index);
     return result;
   }
@@ -134,7 +134,7 @@ class DynamicIndex {
       result = Entry{next.keys.front(), next.values.front()};
     }
     if (!leaves_[index]->delta.empty()) {
-      policy_.on_delta_read(leaves_[index]->state, delta_steps(*leaves_[index]));
+      policy_.on_delta_read(leaves_[index]->state);
       maybe_rebuild_after_read(index);
     }
     return result;
@@ -154,9 +154,9 @@ class DynamicIndex {
       leaf.delta[at].value = value;
       return false;
     }
-    if constexpr (kInstrumented) work_.delta_shifted += leaf.delta.size() - at;
-    leaf.delta.insert(leaf.delta.begin() + static_cast<std::ptrdiff_t>(at),
-                      Entry{key, value});
+    const std::size_t shifted = leaf.delta.size() - at;
+    if constexpr (kInstrumented) work_.delta_shifted += shifted;
+    insert_into_delta(leaf, at, Entry{key, value}, shifted);
     ++size_;
     policy_.on_write(leaf.state);
     const bool forced = leaf.delta.size() >= config_.delta_capacity;
@@ -167,13 +167,16 @@ class DynamicIndex {
     return true;
   }
 
-  // Merges the base and delta streams of each leaf in key order.
+  // Merges the base and delta streams of each leaf in key order. A scan counts
+  // as one buffer-paying read per leaf with a delta, and never rebuilds: the
+  // visitor must not see the structure change underneath it.
   template <class Visit>
   std::size_t scan(const Range& range, Visit&& visit) {
     if (range.hi && range.lo >= *range.hi) return 0;
     std::size_t visited = 0;
     for (std::size_t index = route(range.lo); index < leaves_.size(); ++index) {
-      const Leaf& leaf = *leaves_[index];
+      Leaf& leaf = *leaves_[index];
+      if (!leaf.delta.empty()) policy_.on_delta_read(leaf.state);
       std::size_t b = base_position(leaf, range.lo);
       std::size_t d = delta_position(leaf, range.lo);
       while (b < leaf.keys.size() || d < leaf.delta.size()) {
@@ -368,6 +371,40 @@ class DynamicIndex {
     return std::nullopt;
   }
 
+  // Times one read in a few, so the policy learns what a delta probe really
+  // costs on this machine, including the cache miss on the buffer.
+  std::size_t sampled_delta_position(const Leaf& leaf, Key key) {
+    if constexpr (Policy::kSamplesCosts) {
+      if (policy_.should_sample()) [[unlikely]] {
+        const auto start = std::chrono::steady_clock::now();
+        const std::size_t at = delta_position(leaf, key);
+        policy_.on_read_sample(elapsed_ns(start), delta_steps(leaf));
+        return at;
+      }
+    }
+    return delta_position(leaf, key);
+  }
+
+  void insert_into_delta(Leaf& leaf, std::size_t at, const Entry& entry,
+                         std::size_t shifted) {
+    const auto position = leaf.delta.begin() + static_cast<std::ptrdiff_t>(at);
+    if constexpr (Policy::kSamplesCosts) {
+      if (policy_.should_sample()) [[unlikely]] {
+        const auto start = std::chrono::steady_clock::now();
+        leaf.delta.insert(position, entry);
+        policy_.on_write_sample(elapsed_ns(start), shifted);
+        return;
+      }
+    }
+    leaf.delta.insert(position, entry);
+  }
+
+  static std::uint64_t elapsed_ns(std::chrono::steady_clock::time_point start) {
+    return static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now() - start).count());
+  }
+
   void maybe_rebuild_after_read(std::size_t index) {
     if constexpr (Policy::kChecksOnRead) {
       Leaf& leaf = *leaves_[index];
@@ -439,9 +476,7 @@ class DynamicIndex {
     }
 
     policy_.reset(leaves_[index]->state);
-    const auto ns = static_cast<std::uint64_t>(
-        std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::steady_clock::now() - start).count());
+    const std::uint64_t ns = elapsed_ns(start);
     policy_.on_rebuild(merged_size, ns);
     ++stats_.rebuilds;
     stats_.keys_merged += merged_size;
