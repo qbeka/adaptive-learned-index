@@ -115,7 +115,7 @@ def command_for(spec: dict, cell: dict, replicate: int, binary: Path) -> list[st
     return command + [seed_flag, str(seed)]
 
 
-def write_manifest(run_dir: Path, spec: dict, spec_path: Path, max_load: float) -> None:
+def write_manifest(run_dir: Path, spec: dict, spec_path: Path, max_load: float, binary: Path) -> None:
     path = run_dir / "manifest.json"
     if path.exists():
         # A resumed run may use a different gate. The manifest keeps every change.
@@ -146,6 +146,7 @@ def write_manifest(run_dir: Path, spec: dict, spec_path: Path, max_load: float) 
         "input_md5": inputs,
         "seeds": spec["seeds"],
         "max_load": max_load,
+        "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
         "hardware": hardware(),
         "timing": "steady_clock, 24 MHz tick on Apple silicon (41.7 ns resolution)",
         "thread_placement": "QOS_CLASS_USER_INTERACTIVE; macOS has no public affinity API",
@@ -168,7 +169,7 @@ def main() -> int:
 
     run_dir = ROOT / "results" / spec["name"]
     run_dir.mkdir(parents=True, exist_ok=True)
-    write_manifest(run_dir, spec, spec_path, max_load)
+    write_manifest(run_dir, spec, spec_path, max_load, binary)
 
     raw_path = run_dir / "raw.jsonl"
     done = set()

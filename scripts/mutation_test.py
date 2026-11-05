@@ -27,6 +27,11 @@ POLICY = "include/ali/policy.h"
 STATIC = "include/ali/static_index.h"
 TYPES = "include/ali/types.h"
 
+# These mutants only create an oversized shift, which is undefined. Without a
+# sanitizer the compiler may hide it or fail somewhere unrelated, so they run
+# under the shift sanitizer and are caught at the shift itself.
+UNDEFINED_SHIFTS = {"half-life not clamped", "decay halvings not capped"}
+
 # (name, file, original text, replacement, reason if equivalent)
 MUTANTS = [
     ("window hi loses the absent-key slot", SEGMENT, "predicted + model.under + 1, n", "predicted + model.under, n", None),
@@ -74,12 +79,42 @@ MUTANTS = [
     ("refill not modelled", POLICY, "const double refill = writes / 2;", "const double refill = 0;", None),
     ("reads earn nothing", POLICY, "    ++state.reads;\n", "", None),
     ("calibration can be optimised away", POLICY, 'asm volatile("" : : "r"(words.data()) : "memory");', "", None),
+    # Added after an independent review wrote 27 more mutants and 17 survived.
+    ('bytes_moved omits directory shift', DYNAMIC, '      stats_.bytes_moved += tail * (sizeof(Key) + sizeof(void*));\n      stats_.splits += extra;', '      stats_.splits += extra;', None),
+    ('bytes_moved omits merged bytes', DYNAMIC, '    stats_.bytes_moved += merged_size * sizeof(Entry);\n', '', None),
+    ('keys_merged not counted', DYNAMIC, '    stats_.keys_merged += merged_size;\n', '', None),
+    ('seal keys_merged not counted', DYNAMIC, '    stats_.keys_merged += count;\n', '', None),
+    ('seal bytes omit tail shift', DYNAMIC, 'stats_.bytes_moved += count * sizeof(Entry) + tail * (sizeof(Key) + sizeof(void*));', 'stats_.bytes_moved += count * sizeof(Entry);', None),
+    ('forced_rebuilds not counted', DYNAMIC, '      stats_.forced_rebuilds += forced ? 1 : 0;\n', '', None),
+    ('worst_ns not tracked', DYNAMIC, '    stats_.worst_ns = std::max(stats_.worst_ns, ns);\n  }\n\n  // The delta holds', '  }\n\n  // The delta holds', None),
+    ('write saving dropped', POLICY, 'const double write_saving = writes * ns_per_shifted_entry_ * delta / 2;', 'const double write_saving = 0;', None),
+    ('read saving log removed', POLICY, '(std::log2(1 + delta + refill) - std::log2(1 + refill))', '1.0', None),
+    ('merge cost ignores base', POLICY, 'static_cast<double>(leaf.base_keys + leaf.delta_keys) * ns_per_merged_key_', 'static_cast<double>(leaf.delta_keys) * ns_per_merged_key_', None),
+    ('margin not added to one', POLICY, '(1 + config_.margin) * merge_cost_ns(leaf)', 'config_.margin * merge_cost_ns(leaf)', None),
+    ('read check every time', POLICY, '(state.reads & 15U) == 0 && worth_rebuilding', 'worth_rebuilding', None),
+    ('reads never checked', POLICY, 'return (state.reads & 15U) == 0 && worth_rebuilding(state, leaf);', 'return false;', None),
+    ('merge cost never learned', POLICY, '    if (config_.measure_costs && merged_keys > 0) {\n      blend(ns_per_merged_key_, static_cast<double>(ns) / static_cast<double>(merged_keys));\n    }\n', '', None),
+    ('read cost never learned', POLICY, '    if (steps > 0) {\n      blend(ns_per_step_, static_cast<double>(ns) / static_cast<double>(steps));\n    }\n', '', None),
+    ('rebuild does not clear counters', DYNAMIC, '    for (std::size_t i = 0; i <= extra; ++i) policy_.reset(leaves_[index + i]->state);\n', '', None),
+    ('seal does not clear counters', DYNAMIC, '    policy_.reset(leaf.state);\n', '', None),
+    ('scan pays no delta read', DYNAMIC, '      if (!leaf.delta.empty()) policy_.on_delta_read(leaf.state);\n', '', None),
+    ('lower_bound earns no read', DYNAMIC, '      policy_.on_delta_read(leaves_[index]->state);\n      maybe_rebuild_after_read(index);\n', '', None),
+    ('widen left bound off by one', SEGMENT, 'lo = step <= start ? start - step + 1 : 0;', 'lo = step <= start ? start - step + 2 : 0;', None),
+    ('widen left loop gives up', SEGMENT, 'while (step <= start && keys[start - step] >= key) {', 'while (step < start && keys[start - step] >= key) {', None),
+    ('fraction overflow guard', SEGMENT, 'if (num >= den) return', 'if (num > den) return', None),
+    ('seal drops empty-base guard', DYNAMIC, 'if (config_.seal_tail_appends && !old_leaf.keys.empty() &&', 'if (config_.seal_tail_appends &&', None),
+    ('segment cap clamp removed', SEGMENT, 'std::min({n, max_keys, kMaxSegmentKeys})', 'std::min(n, max_keys)', 'Needs one segment of more than 2^31 keys, which no test can hold in memory.'),
+    ('decay halvings not capped', POLICY, 'std::min<std::uint32_t>(now - state.epoch, 31)', 'now - state.epoch', None),
+    ('bulk_load keeps old stats', DYNAMIC, '    stats_ = {};\n    work_ = {};\n', '', None),
+    ('memory capacity omits delta', DYNAMIC, 'leaf->values.capacity() * sizeof(Value) +\n                         leaf->delta.capacity() * sizeof(Entry);', 'leaf->values.capacity() * sizeof(Value);', None),
 ]
 
 
-def run_suite(work: Path) -> tuple[str, str]:
+def run_suite(work: Path, sanitize_shifts: bool = False) -> tuple[str, str]:
     """Returns (outcome, detail). Outcome is killed, survived or invalid."""
     flags = ["clang++", "-std=c++20", "-O2", "-Iinclude", "-Itests", "-w"]
+    if sanitize_shifts:
+        flags += ["-fsanitize=shift", "-fno-sanitize-recover=shift"]
     for test in ("test_dynamic", "test_static", "test_reference"):
         built = subprocess.run(flags + [f"tests/{test}.cpp", "-o", test], cwd=work, capture_output=True, text=True)
         if built.returncode != 0:
@@ -93,7 +128,8 @@ def run_suite(work: Path) -> tuple[str, str]:
     return "survived", ""
 
 
-def run_in_sandbox(relative: str | None, original: str | None, replacement: str | None) -> tuple[str, str]:
+def run_in_sandbox(relative: str | None, original: str | None, replacement: str | None,
+                   sanitize_shifts: bool = False) -> tuple[str, str]:
     """Runs the suite in a temporary copy, with one edit applied if one is given."""
     with tempfile.TemporaryDirectory() as temp:
         work = Path(temp)
@@ -103,7 +139,7 @@ def run_in_sandbox(relative: str | None, original: str | None, replacement: str 
         if relative is not None:
             target = work / relative
             target.write_text(target.read_text().replace(original, replacement))
-        return run_suite(work)
+        return run_suite(work, sanitize_shifts)
 
 
 def main() -> int:
@@ -131,7 +167,7 @@ def main() -> int:
         if equivalent:
             return {"name": name, "file": relative, "outcome": "equivalent", "detail": equivalent}
         started = time.time()
-        outcome, detail = run_in_sandbox(relative, original, replacement)
+        outcome, detail = run_in_sandbox(relative, original, replacement, name in UNDEFINED_SHIFTS)
         print(f"{outcome:9} {name}", flush=True)
         return {"name": name, "file": relative, "outcome": outcome, "detail": detail,
                 "seconds": round(time.time() - started, 1)}

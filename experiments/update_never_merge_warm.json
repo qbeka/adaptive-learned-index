@@ -1,0 +1,66 @@
+{
+  "name": "update_never_merge_warm",
+  "binary": "update_bench",
+  "max_load": 14,
+  "seeds": [
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108
+  ],
+  "note": "Exploratory. The same control on the warm split, the only split where adaptive makes many rebuilds. It decides nothing.",
+  "variants": [
+    {
+      "dataset": "data/sosd/wiki_ts_200M_uint64",
+      "stride": 2048
+    }
+  ],
+  "matrix": {
+    "ops": [
+      20000000
+    ],
+    "workload": [
+      "read_heavy",
+      "write_heavy",
+      "append_only",
+      "shifting_hotspot"
+    ],
+    "mode": [
+      "throughput"
+    ]
+  },
+  "indexes": [
+    {
+      "label": "adaptive_e8",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "1",
+        "--half-life",
+        "22",
+        "--epsilon",
+        "8",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "fixed_e8_t4095",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "4095",
+        "--epsilon",
+        "8",
+        "--seal-tail",
+        "1"
+      ]
+    }
+  ]
+}

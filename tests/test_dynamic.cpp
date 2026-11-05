@@ -310,6 +310,166 @@ void check_shift_cost_calibration_measures_something() {
   CHECK(policy.ns_per_shifted_entry() < 100.0);
 }
 
+// Decay caps the shift at 31. A larger shift of a 32-bit value is undefined.
+void check_long_idle_leaf_decays_to_nothing() {
+  AdaptiveConfig adaptive = frozen_costs();
+  adaptive.half_life_log2 = 4;
+  AdaptivePolicy policy(adaptive);
+  AdaptivePolicy::LeafState idle;
+  AdaptivePolicy::LeafState busy;
+  idle.reads = 1000;
+  for (int i = 0; i < 33 * 16; ++i) policy.on_delta_read(busy);
+  policy.on_delta_read(idle);
+  CHECK(idle.reads == 1);
+}
+
+void check_write_saving_is_counted() {
+  const AdaptivePolicy policy(frozen_costs());
+  AdaptivePolicy::LeafState state;
+  state.writes = 100;
+  const LeafView leaf{1000, 50};
+  // No reads, so all of the saving comes from shifting.
+  CHECK(policy.expected_saving_ns(state, leaf) == 100 * policy.ns_per_shifted_entry() * 50 / 2);
+}
+
+void check_reads_decide_only_every_sixteenth_time() {
+  AdaptivePolicy policy(frozen_costs());
+  const LeafView leaf{10, 64};
+  AdaptivePolicy::LeafState state;
+  state.reads = 1601;
+  CHECK(!policy.should_rebuild_after_read(state, leaf));
+  state.reads = 1600;
+  CHECK(policy.should_rebuild_after_read(state, leaf));
+}
+
+// Each sample moves the average by one eighth of the difference.
+void check_costs_are_learned_from_measurements() {
+  AdaptiveConfig adaptive = frozen_costs();
+  adaptive.measure_costs = true;
+  adaptive.ns_per_step = 20;
+  adaptive.ns_per_merged_key = 10;
+  AdaptivePolicy policy(adaptive);
+  policy.on_read_sample(1000, 10);
+  CHECK(policy.ns_per_step() == 30.0);
+  policy.on_rebuild(10, 1000);
+  CHECK(policy.ns_per_merged_key() == 21.25);
+}
+
+AdaptiveIndex small_buffer_index(bool seal) {
+  DynamicConfig config;
+  config.max_leaf_keys = 1 << 14;
+  config.delta_capacity = 64;
+  config.seal_tail_appends = seal;
+  AdaptiveConfig adaptive = frozen_costs();
+  adaptive.margin = 0;
+  AdaptiveIndex index(config, AdaptivePolicy(adaptive));
+  index.bulk_load(even_keys(1000));
+  return index;
+}
+
+// The expected saving recorded at a rebuild shows which counters the leaf held.
+// Writes only, with nothing left over from before: W * shift cost * d / 2.
+double writes_only_saving(const AdaptiveIndex& index, double writes, double delta) {
+  return writes * index.policy().ns_per_shifted_entry() * delta / 2;
+}
+
+void check_rebuild_clears_leaf_counters() {
+  AdaptiveIndex index = small_buffer_index(false);
+  for (Key i = 0; i < 32; ++i) index.insert_or_assign(i * 2 + 1, i);
+  for (int i = 0; i < 100000 && index.stats().rebuilds == 0; ++i) index.lookup(1);
+  CHECK(index.stats().rebuilds == 1);
+  for (Key i = 0; i < 64; ++i) index.insert_or_assign(i * 4 + 701, i);
+  CHECK(index.stats().rebuilds == 2);
+  CHECK(index.stats().forced_rebuilds == 1);
+  CHECK(index.last_rebuild().expected_saving_ns == writes_only_saving(index, 64, 64));
+}
+
+void check_seal_clears_the_old_leaf_counters() {
+  AdaptiveIndex index = small_buffer_index(true);
+  const Key end = 2000;
+  for (Key i = 0; i < 32; ++i) index.insert_or_assign(end + i * 2, i);
+  for (int i = 0; i < 100000 && index.stats().rebuilds == 0; ++i) index.lookup(end + 1);
+  CHECK(index.stats().seals == 1);
+  for (Key i = 0; i < 64; ++i) index.insert_or_assign(i * 4 + 701, i);
+  CHECK(index.stats().forced_rebuilds == 1);
+  CHECK(index.last_rebuild().expected_saving_ns == writes_only_saving(index, 64, 64));
+}
+
+void check_every_read_path_earns_a_delta_read() {
+  AdaptiveIndex by_lower_bound = small_buffer_index(false);
+  for (Key i = 0; i < 32; ++i) by_lower_bound.insert_or_assign(i * 2 + 1, i);
+  for (int i = 0; i < 100000 && by_lower_bound.stats().rebuilds == 0; ++i) by_lower_bound.lower_bound(1);
+  CHECK(by_lower_bound.stats().rebuilds == 1);
+
+  // A scan never rebuilds, so the evidence it earned shows at the next write.
+  AdaptiveIndex by_scan = small_buffer_index(false);
+  for (Key i = 0; i < 32; ++i) by_scan.insert_or_assign(i * 2 + 1, i);
+  for (int i = 0; i < 2000; ++i) by_scan.scan({0, 4}, [](const Entry&) {});
+  CHECK(by_scan.stats().rebuilds == 0);
+  by_scan.insert_or_assign(999, 1);
+  CHECK(by_scan.stats().rebuilds == 1);
+}
+
+FixedIndex many_small_leaves(bool seal) {
+  DynamicConfig config;
+  config.max_leaf_keys = 64;
+  config.seal_tail_appends = seal;
+  FixedIndex index(config, FixedPolicy(32));
+  std::vector<Entry> entries;
+  for (Key key = 0; key < 1024; ++key) entries.push_back({key * 1000, key});
+  index.bulk_load(entries);
+  return index;
+}
+
+// bytes_moved has two parts, entries merged and directory slots shifted. The
+// report quotes them separately, so each must be right.
+void check_bytes_moved_counts_directory_shifts() {
+  FixedIndex split = many_small_leaves(false);
+  for (Key i = 0; i < 32; ++i) split.insert_or_assign(i * 10 + 1, i);
+  const RebuildStats stats = split.stats();
+  CHECK(stats.splits > 0);
+  CHECK(stats.worst_ns > 0);
+  CHECK(stats.worst_ns <= stats.total_ns);
+  const std::uint64_t shifted = stats.bytes_moved - stats.keys_merged * sizeof(Entry);
+  const std::uint64_t slot = sizeof(Key) + sizeof(void*);
+  CHECK(shifted > 0);
+  CHECK(shifted % slot == 0);
+
+  // A seal in the middle of the directory shifts every leaf after it.
+  FixedIndex seal = many_small_leaves(true);
+  const Key past_leaf = seal.leaf_keys(0).back() + 1;
+  for (Key i = 0; i < 32; ++i) seal.insert_or_assign(past_leaf + i, i);
+  CHECK(seal.stats().seals == 1);
+  CHECK(seal.stats().keys_merged == 32);
+  CHECK(seal.stats().bytes_moved > 32 * sizeof(Entry));
+}
+
+void check_forced_rebuilds_are_counted() {
+  DynamicConfig config;
+  config.delta_capacity = 8;
+  FixedIndex index(config, FixedPolicy(1 << 20));
+  index.bulk_load(even_keys(1000));
+  for (Key i = 0; i < 8; ++i) index.insert_or_assign(i * 2 + 1, i);
+  CHECK(index.stats().forced_rebuilds == 1);
+}
+
+void check_bulk_load_resets_the_stats() {
+  FixedIndex index = many_small_leaves(false);
+  for (Key i = 0; i < 32; ++i) index.insert_or_assign(i * 10 + 1, i);
+  CHECK(index.stats().rebuilds > 0);
+  index.bulk_load(even_keys(100));
+  CHECK(index.stats().rebuilds == 0);
+  CHECK(index.stats().keys_merged == 0);
+}
+
+void check_capacity_includes_buffers() {
+  FixedIndex index = make_index(4, 1 << 14, 1 << 20);
+  index.bulk_load(even_keys(1000));
+  const std::size_t before = index.memory().capacity;
+  for (Key i = 0; i < 100; ++i) index.insert_or_assign(i * 2 + 1, i);
+  CHECK(index.memory().capacity >= before + 100 * sizeof(Entry));
+}
+
 // The hysteresis promise: after a rebuild the counters are clear, so a single
 // burst cannot pay for a second rebuild. The loop alternates a small write burst
 // and an equally small read burst, then bounds what the policy spent.
@@ -457,6 +617,17 @@ int main() {
   check_counters_decay_while_a_leaf_is_idle();
   check_extreme_half_life_is_safe();
   check_minimums_gate_every_decision();
+  check_long_idle_leaf_decays_to_nothing();
+  check_write_saving_is_counted();
+  check_reads_decide_only_every_sixteenth_time();
+  check_costs_are_learned_from_measurements();
+  check_rebuild_clears_leaf_counters();
+  check_seal_clears_the_old_leaf_counters();
+  check_every_read_path_earns_a_delta_read();
+  check_bytes_moved_counts_directory_shifts();
+  check_forced_rebuilds_are_counted();
+  check_bulk_load_resets_the_stats();
+  check_capacity_includes_buffers();
   check_shift_cost_calibration_measures_something();
   check_seal_keeps_appended_keys_and_skips_the_merge();
   check_adaptive_does_not_thrash_on_repeated_bursts();
