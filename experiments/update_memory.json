@@ -1,0 +1,87 @@
+{
+  "name": "update_memory",
+  "binary": "update_bench",
+  "max_load": 14,
+  "seeds": [
+    101,
+    102,
+    103
+  ],
+  "selected_from": {
+    "fixed": "fixed_e16_t64",
+    "adaptive": "adaptive_e8_m1_h22",
+    "btree": "btree64"
+  },
+  "variants": [
+    {
+      "dataset": "data/sosd/wiki_ts_200M_uint64",
+      "stride": 1
+    },
+    {
+      "dataset": "data/sosd/osm_cellids_200M_uint64",
+      "stride": 4
+    },
+    {
+      "dataset": "data/sosd/wiki_ts_200M_uint64",
+      "stride": 2048
+    }
+  ],
+  "matrix": {
+    "ops": [
+      20000000
+    ],
+    "workload": [
+      "read_heavy",
+      "write_heavy",
+      "append_only",
+      "shifting_hotspot"
+    ],
+    "mode": [
+      "memory"
+    ]
+  },
+  "indexes": [
+    {
+      "label": "fixed",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "64",
+        "--epsilon",
+        "16",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "1",
+        "--half-life",
+        "22",
+        "--epsilon",
+        "8",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "btree",
+      "args": [
+        "--index",
+        "btree64"
+      ]
+    },
+    {
+      "label": "alex",
+      "args": [
+        "--index",
+        "alex"
+      ]
+    }
+  ]
+}

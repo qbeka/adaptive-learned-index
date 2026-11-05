@@ -71,7 +71,7 @@ def main() -> int:
     args_of = {index["label"]: index["args"] for index in validation["indexes"]}
     # The final labels name the role, and the arguments keep the chosen settings.
     indexes = [{"label": family, "args": args_of[label]} for family, label in chosen.items()]
-    indexes.append({"label": "alex", "args": args_of["alex"]})
+    indexes.append({"label": "alex", "args": ["--index", "alex"]})
     for name, binary, mode, seeds, labels in RUNS:
         spec = {
             "name": name,
