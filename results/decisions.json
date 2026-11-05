@@ -1,0 +1,236 @@
+[
+  {
+    "split": "primary",
+    "n_seeds": 8,
+    "h1": {
+      "ratio": [
+        1.0331470367443376,
+        0.9393287771361055,
+        1.151741275807403
+      ],
+      "holds": false
+    },
+    "h2": {
+      "geomean_ratio": [
+        0.9476324870929348,
+        0.9069311123801284,
+        0.9937958476603084
+      ],
+      "per_workload": {
+        "read_heavy": [
+          0.8209123599874527,
+          0.7318615746572307,
+          0.8942240069705704
+        ],
+        "write_heavy": [
+          1.0760463699128402,
+          1.032856453390161,
+          1.1417892307176458
+        ],
+        "append_only": [
+          0.8836287709594318,
+          0.8244228550759868,
+          0.9360865831952588
+        ],
+        "shifting_hotspot": [
+          1.0331470367443376,
+          0.9393287771361055,
+          1.151741275807403
+        ]
+      },
+      "floor_ok": false,
+      "holds": false
+    },
+    "h3": {
+      "per_workload": {
+        "read_heavy": {
+          "adaptive_bytes": 1277576.0,
+          "fixed_bytes": 95317936.0,
+          "ratio": 0.013403311628569045
+        },
+        "write_heavy": {
+          "adaptive_bytes": 0.0,
+          "fixed_bytes": 58461091488.0,
+          "ratio": 0.0
+        },
+        "append_only": {
+          "adaptive_bytes": 160081424.0,
+          "fixed_bytes": 160083968.0,
+          "ratio": 0.9999841083399432
+        },
+        "shifting_hotspot": {
+          "adaptive_bytes": 2543000.0,
+          "fixed_bytes": 10951964840.0,
+          "ratio": 0.0002321957783056579
+        }
+      },
+      "holds": true
+    },
+    "memory": {
+      "ratio_final_bytes": {
+        "read_heavy": 1.0184027111350966,
+        "write_heavy": 1.0706545946924644,
+        "append_only": 0.9983440553040168,
+        "shifting_hotspot": 1.0367742447588142
+      },
+      "within_5_percent": false
+    },
+    "claim_holds": false
+  },
+  {
+    "split": "hostile",
+    "n_seeds": 8,
+    "h1": {
+      "ratio": [
+        1.5353855643344139,
+        1.4187448960341391,
+        1.6659653234210137
+      ],
+      "holds": true
+    },
+    "h2": {
+      "geomean_ratio": [
+        1.1843521108280481,
+        1.1306463179960116,
+        1.2320326274442617
+      ],
+      "per_workload": {
+        "read_heavy": [
+          0.9003232577695515,
+          0.8301930195263969,
+          0.9595529353124145
+        ],
+        "write_heavy": [
+          1.4951166873951944,
+          1.4317646812842615,
+          1.559795737943548
+        ],
+        "append_only": [
+          0.9519899037163527,
+          0.8431114708259345,
+          1.0557853169057467
+        ],
+        "shifting_hotspot": [
+          1.5353855643344139,
+          1.4187448960341391,
+          1.6659653234210137
+        ]
+      },
+      "floor_ok": true,
+      "holds": true
+    },
+    "h3": {
+      "per_workload": {
+        "read_heavy": {
+          "adaptive_bytes": 1426712.0,
+          "fixed_bytes": 0.0,
+          "ratio": null
+        },
+        "write_heavy": {
+          "adaptive_bytes": 0.0,
+          "fixed_bytes": 152652249960.0,
+          "ratio": 0.0
+        },
+        "append_only": {
+          "adaptive_bytes": 159837992.0,
+          "fixed_bytes": 159837696.0,
+          "ratio": 1.0000018518785456
+        },
+        "shifting_hotspot": {
+          "adaptive_bytes": 6553912.0,
+          "fixed_bytes": 43435715480.0,
+          "ratio": 0.0001508876261752325
+        }
+      },
+      "holds": false
+    },
+    "memory": {
+      "ratio_final_bytes": {
+        "read_heavy": 1.0579603830881572,
+        "write_heavy": 1.069135240918459,
+        "append_only": 1.066931644761125,
+        "shifting_hotspot": 1.0700524221098087
+      },
+      "within_5_percent": false
+    },
+    "claim_holds": false
+  },
+  {
+    "split": "warm",
+    "n_seeds": 8,
+    "h1": {
+      "ratio": [
+        1.1443920267599272,
+        1.0245959207996433,
+        1.2570050874782026
+      ],
+      "holds": true
+    },
+    "h2": {
+      "geomean_ratio": [
+        1.0871349329766111,
+        1.0299603502803645,
+        1.138086592266122
+      ],
+      "per_workload": {
+        "read_heavy": [
+          1.019154944861034,
+          0.9498631689664111,
+          1.0690154479375054
+        ],
+        "write_heavy": [
+          0.8977910564505447,
+          0.8048742574438379,
+          0.9787056105321738
+        ],
+        "append_only": [
+          1.3339620997031616,
+          1.2632047343686212,
+          1.434548370249821
+        ],
+        "shifting_hotspot": [
+          1.1443920267599272,
+          1.0245959207996433,
+          1.2570050874782026
+        ]
+      },
+      "floor_ok": true,
+      "holds": true
+    },
+    "h3": {
+      "per_workload": {
+        "read_heavy": {
+          "adaptive_bytes": 5299440.0,
+          "fixed_bytes": 8344168.0,
+          "ratio": 0.6351070592059028
+        },
+        "write_heavy": {
+          "adaptive_bytes": 2042496.0,
+          "fixed_bytes": 8207880.0,
+          "ratio": 0.24884574335882104
+        },
+        "append_only": {
+          "adaptive_bytes": 742112.0,
+          "fixed_bytes": 741376.0,
+          "ratio": 1.0009927486187846
+        },
+        "shifting_hotspot": {
+          "adaptive_bytes": 308936.0,
+          "fixed_bytes": 746112.0,
+          "ratio": 0.41406115971864815
+        }
+      },
+      "holds": false
+    },
+    "memory": {
+      "ratio_final_bytes": {
+        "read_heavy": 1.0125738306925869,
+        "write_heavy": 1.0014587341985828,
+        "append_only": 1.0137998433717903,
+        "shifting_hotspot": 1.0159083955612462
+      },
+      "within_5_percent": true
+    },
+    "claim_holds": true
+  }
+]
