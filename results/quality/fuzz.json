@@ -1,0 +1,16 @@
+{
+  "seeds": 500000,
+  "traces": 500000,
+  "ops": 2032984796,
+  "rebuilds": 75511682,
+  "splits": 64361689,
+  "seals": 29856078,
+  "widened": 0,
+  "mismatches": 0,
+  "first_seed": 1,
+  "ops_per_trace_target": 4000,
+  "shards": 8,
+  "seconds_summed": 5362.5,
+  "command": "build/release/fuzz --seeds 62500 --first 1+62500*i --ops 4000, for i in 0 to 7",
+  "commit": "f2674d1d8de3ff328280b5e11b56b5c3a214052a"
+}
