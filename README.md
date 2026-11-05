@@ -2,7 +2,7 @@
 
 *An in-memory ordered index that predicts where a key is, then measures when a rebuild pays for itself.*
 
-[Live replay](https://www.qendrimbeka.com/projects/adaptive-learned-index/index.html) | [Report](docs/REPORT.md) | [Interview walkthrough](docs/INTERVIEW.md)
+[Live replay](https://www.qendrimbeka.com/projects/adaptive-learned-index/index.html) | [Report](docs/REPORT.md)
 
 A C++20 library for exact ordered lookups over unsigned 64-bit keys. A small linear model predicts a key's position, and a bounded search corrects the prediction. Writes go to a small buffer beside each segment. A policy decides when merging that buffer is worth the cost, using the reads, writes and costs it observes on the machine it runs on.
 
@@ -130,7 +130,7 @@ A key is in the base or the buffer, never both. So a read that hits the base nev
 | `experiments/` | Frozen experiment specs and the plan. |
 | `results/` | Raw measurements, manifests, tables and charts for each run. |
 | `site/` | Offline demo generated from a recorded run. |
-| `docs/` | Contract, research notes, report, interview walkthrough, checkpoint. |
+| `docs/` | Contract, research notes, report, checkpoint. |
 
 ## Documents
 
@@ -139,7 +139,6 @@ A key is in the base or the buffer, never both. So a read that hits the base nev
 | [docs/REPORT.md](docs/REPORT.md) | The measured results and what they mean. |
 | [docs/API.md](docs/API.md) | The exact behaviour of every operation. |
 | [docs/RESEARCH.md](docs/RESEARCH.md) | Sources, derivations, and every failed experiment. |
-| [docs/INTERVIEW.md](docs/INTERVIEW.md) | A short walkthrough of the hardest decisions. |
 | [docs/CHECKPOINT.md](docs/CHECKPOINT.md) | What passed, what failed, and the next command. |
 | [data/README.md](data/README.md) | Where the datasets come from. |
 
