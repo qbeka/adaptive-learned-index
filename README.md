@@ -4,7 +4,21 @@
 
 A C++20 library for exact ordered lookups over unsigned 64-bit keys. A small linear model predicts a key's position, and a bounded search corrects the prediction. Writes go to a small buffer beside each segment. A policy decides when merging that buffer is worth the cost, using the reads, writes and costs it observes on the machine it runs on.
 
-The research question: **when does a local rebuild pay for itself?** Results are in [docs/REPORT.md](docs/REPORT.md).
+The research question: **when does a local rebuild pay for itself?**
+
+## Results
+
+**The main claim failed.** On the primary data, the adaptive policy did not beat the best fixed threshold. The hypotheses and the rule were written down before any test data was read. Full results are in [docs/REPORT.md](docs/REPORT.md).
+
+| Result | Measured | Compared with | Data |
+|---|---|---|---|
+| Lookup time | 3.1x faster, at 0.021 index bytes per key | Sorted array | 90M Wikipedia timestamps |
+| Throughput on data it was not tuned on | 1.54x [1.42, 1.67] | Fixed threshold tuned on other data | OpenStreetMap keys, moving hotspot |
+| Rebuild copying under heavy writes | 58 GB removed, throughput 1.08x | Fixed threshold | Wikipedia timestamps |
+| Speed against ALEX | 1.2x to 3.4x slower, with 23 to 32 percent less memory | ALEX | Wikipedia timestamps |
+| Wrong answers | 0 in 2.03 billion fuzzed operations | Ordered-map oracle | 500,000 random index shapes |
+
+Brackets are 95 percent paired bootstrap intervals over 8 seeds. Machine: Apple M5 Pro, measured 5 November 2026.
 
 | | |
 |---|---|
@@ -35,9 +49,9 @@ It runs the correctness suite, replays a trace against the oracle, and compares 
 | Run a benchmark experiment | `scripts/run_experiment.py experiments/NAME.json` |
 | Summarise a run | `scripts/analyze.py results/NAME --reference LABEL` |
 | Rerun all final benchmarks | `scripts/run_full_benchmark.sh` |
-| Open the demo | Open `site/index.html` in a browser |
+| Open the demo | Open `site/index.html` in a browser. It works offline. |
 
-Experiments resume if interrupted, and they wait for the machine to go quiet before each measurement.
+Experiments resume if interrupted, and they wait for the machine to go quiet before each measurement. [results/ARTIFACTS.md](results/ARTIFACTS.md) lists every recorded run.
 
 ## Use it
 
@@ -116,7 +130,7 @@ A key is in the base or the buffer, never both. So a read that hits the base nev
 | `tools/` | Trace and key generators, and a trace replayer. |
 | `bench/` | Benchmarks, baseline adapters, workloads, demo recorder. |
 | `experiments/` | Frozen experiment specs and the plan. |
-| `results/` | Raw measurements, manifests and summaries for each run. |
+| `results/` | Raw measurements, manifests, tables and charts for each run. |
 | `site/` | Offline demo generated from a recorded run. |
 | `docs/` | Contract, research notes, report, interview walkthrough, checkpoint. |
 

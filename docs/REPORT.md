@@ -166,7 +166,7 @@ Five seeds, 10,000,000 lookups per process, median load 9 for full data and 6 fo
 | Correctness suite | 9,874,517 operations checked against an ordered-map oracle | `make test` |
 | ASan and UBSan | Full suite clean | `make sanitize` |
 | Coverage | 98.26 percent of lines, 93.07 percent of branches | [coverage.json](../results/quality/coverage.json) |
-| Mutation testing | MUTATION_RESULT | [mutation.json](../results/quality/mutation.json) |
+| Mutation testing | 44 of 44 scored mutants caught, 1 equivalent, from a hand-written list of 45. The first honest score was 40 of 44, and I added tests for the four survivors | [mutation.json](../results/quality/mutation.json) |
 
 ## Limits of this evidence
 

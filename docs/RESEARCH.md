@@ -197,6 +197,29 @@ cannot cause repeated rebuilds, which was false as worded.
    claim that widening never happens was false there. Epsilon and segment length
    are now clamped so that both bounds fit.
 
+8. **The routing conclusion was too broad.** Item 2 dropped routing work on a
+   profile at larger epsilon. A later diagnostic on `fb` measured routing at 29
+   percent at epsilon 8 and 11 percent at epsilon 64, on a machine at load 5 or
+   below. The gap to PGM stayed unexplained in part, so routing work was cut too
+   early. The diagnostic is `bench/profile_static.cpp`, and it is not a benchmark
+   result.
+
+9. **A false mutation score.** The first complete run reported 44 of 44. Four of those
+   mutants had passed `test_dynamic` and `test_static`, then "failed" `test_reference`
+   only because the sandbox had no `build/` folder to write a file into. The real
+   score was 40 of 44. The script now runs the unmodified suite in the sandbox first
+   and refuses to score if it fails. Each of the four survivors then got a test.
+
+10. **Selection compared two things at once.** The rule picked epsilon 8 for adaptive
+    and epsilon 16 for fixed, so the verdict mixes policy and epsilon. An exploratory
+    run at equal epsilon moved `read_heavy` from 0.821 to 0.970. Tuning should have
+    held epsilon fixed across the policies.
+
+11. **Tuning on a loaded machine.** The validation sweep ran at median load 153, so
+    neighbouring configurations differ by less than the noise, and the chosen
+    settings may not be the best. The final runs repeated on a quiet machine, but
+    the sweep did not.
+
 ## Independent review
 
 A separate agent reviewed commit `9d6ba6d` against written acceptance criteria,
