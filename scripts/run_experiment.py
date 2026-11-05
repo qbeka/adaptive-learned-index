@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Runs one experiment spec and stores raw results with a manifest.
 
-Usage: scripts/run_experiment.py experiments/NAME.json [--max-load N]
+Usage: scripts/run_experiment.py experiments/NAME.json [--max-load N] [--jobs N]
 
 Each run directory holds:
   manifest.json  commit, flags, input hashes, hardware, seeds, command, elapsed
@@ -27,6 +27,7 @@ import shutil
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -154,6 +155,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("spec", type=Path)
     parser.add_argument("--max-load", type=float, default=None)
+    parser.add_argument("--jobs", type=int, default=1)
     args = parser.parse_args()
 
     spec_path = args.spec.resolve()
@@ -176,36 +178,46 @@ def main() -> int:
     total = len(cells) * len(spec["seeds"])
     start = time.time()
     finished = len(done)
-    with open(raw_path, "a") as raw:
-        for replicate in range(len(spec["seeds"])):
-            order = list(cells)
-            random.Random(spec["seeds"][replicate]).shuffle(order)
-            for cell in order:
-                identifier = cell_id(cell, replicate)
-                if identifier in done:
-                    continue
-                load_before = wait_for_quiet(max_load)
-                started = time.time()
-                command = command_for(spec, cell, replicate, binary)
-                completed = subprocess.run(command, capture_output=True, text=True, cwd=ROOT)
-                if completed.returncode != 0:
-                    print(completed.stderr, file=sys.stderr)
-                    print(f"FAILED: {' '.join(command)}", file=sys.stderr)
-                    return 1
-                record = json.loads(completed.stdout)
-                record.update(
-                    cell_id=identifier,
-                    label=cell["label"],
-                    replicate=replicate,
-                    load_before=round(load_before, 2),
-                    load_after=round(os.getloadavg()[0], 2),
-                    elapsed_s=round(time.time() - started, 2),
-                )
-                raw.write(json.dumps(record) + "\n")
+    pending = []
+    for replicate in range(len(spec["seeds"])):
+        order = list(cells)
+        random.Random(spec["seeds"][replicate]).shuffle(order)
+        pending += [(cell, replicate) for cell in order if cell_id(cell, replicate) not in done]
+
+    def run_cell(cell: dict, replicate: int) -> dict:
+        load_before = wait_for_quiet(max_load)
+        started = time.time()
+        command = command_for(spec, cell, replicate, binary)
+        completed = subprocess.run(command, capture_output=True, text=True, cwd=ROOT)
+        if completed.returncode != 0:
+            raise RuntimeError(f"FAILED: {' '.join(command)}\n{completed.stderr}")
+        record = json.loads(completed.stdout)
+        record.update(
+            cell_id=cell_id(cell, replicate),
+            label=cell["label"],
+            replicate=replicate,
+            load_before=round(load_before, 2),
+            load_after=round(os.getloadavg()[0], 2),
+            elapsed_s=round(time.time() - started, 2),
+        )
+        return record
+
+    # More than one job makes runs share the machine, so it is for tuning sweeps.
+    # Final measurements use the default of one.
+    with open(raw_path, "a") as raw, ThreadPoolExecutor(args.jobs) as pool:
+        futures = [pool.submit(run_cell, cell, replicate) for cell, replicate in pending]
+        try:
+            for future in as_completed(futures):
+                raw.write(json.dumps(future.result()) + "\n")
                 raw.flush()
                 finished += 1
                 if finished % 10 == 0 or finished == total:
                     print(f"{finished}/{total} done, {time.time() - start:.0f}s", flush=True)
+        except RuntimeError as failure:
+            for future in futures:
+                future.cancel()
+            print(failure, file=sys.stderr)
+            return 1
 
     manifest_path = run_dir / "manifest.json"
     manifest = json.loads(manifest_path.read_text())

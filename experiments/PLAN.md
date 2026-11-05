@@ -117,3 +117,11 @@ adaptive policy's decisions do use measured costs, so its counts can shift with 
 
 To replace these numbers on a quiet machine, delete the run folders and rerun
 `scripts/run_full_benchmark.sh`, which uses each spec's own gate.
+
+## Amendment, 4 November 2026: parallel tuning sweep
+
+Four other projects kept the load average between 60 and 170 when the owner asked
+to resume, so the quiet gate stays relaxed. The validation sweep continues from its
+saved runs with three processes at a time, because it only picks configurations and
+every replicate runs in shuffled order. Final measurements run one process at a
+time. No validation result had been analysed when this was decided.
