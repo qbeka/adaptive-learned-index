@@ -47,6 +47,11 @@ def load(run_dir: Path) -> list[dict]:
         return [json.loads(line) for line in raw]
 
 
+def exact_bytes_per_key(record: dict) -> float:
+    """The stored field rounds to 3 places, which is 0 for the largest epsilons."""
+    return record["index_bytes"] / record["keys"]
+
+
 def nice_ticks(low: float, high: float, count: int = 5) -> list[float]:
     step = (high - low) / count
     magnitude = 10 ** math.floor(math.log10(step))
@@ -89,7 +94,7 @@ def tradeoff_chart(run_dir: Path, out: Path) -> None:
 
     datasets = sorted(binary)
     panel_width, panel_height = 300, 280
-    left, top, gap = 56, 56, 28
+    left, top, gap = 56, 74, 44
     width = left + len(datasets) * (panel_width + gap) + 8
     height = top + panel_height + 56
     parts = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" '
@@ -103,7 +108,7 @@ def tradeoff_chart(run_dir: Path, out: Path) -> None:
     ns_values = [r["ns_per_lookup"] for rows in cells.values() for r in rows] + [v for rows in binary.values() for v in rows]
     y_ticks = nice_ticks(0, max(ns_values) * 1.08)
     y_max = y_ticks[-1]
-    bytes_values = [r["index_bytes_per_key"] for rows in cells.values() for r in rows]
+    bytes_values = [exact_bytes_per_key(r) for rows in cells.values() for r in rows]
     x_low = math.floor(math.log10(min(bytes_values)))
     x_high = math.ceil(math.log10(max(bytes_values)))
 
@@ -127,7 +132,7 @@ def tradeoff_chart(run_dir: Path, out: Path) -> None:
             for (cell_dataset, index, epsilon), rows in sorted(cells.items(), key=lambda item: item[0][2]):
                 if cell_dataset != dataset or index != name:
                     continue
-                points.append((statistics.median(r["index_bytes_per_key"] for r in rows),
+                points.append((statistics.median(exact_bytes_per_key(r) for r in rows),
                                statistics.median(r["ns_per_lookup"] for r in rows), epsilon, len(rows)))
             path = " ".join(f"{x_of(x):.1f},{y_of(y):.1f}" for x, y, _, _ in points)
             parts.append(f'<polyline points="{path}" fill="none" class="s{series}" stroke-width="2" style="fill:none"/>')

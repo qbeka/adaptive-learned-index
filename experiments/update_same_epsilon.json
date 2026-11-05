@@ -1,0 +1,70 @@
+{
+  "name": "update_same_epsilon",
+  "binary": "update_bench",
+  "max_load": 14,
+  "seeds": [
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108
+  ],
+  "note": "Exploratory, written after the verdict. It separates the policy from the epsilon that each policy's selection chose. It decides nothing.",
+  "variants": [
+    {
+      "dataset": "data/sosd/wiki_ts_200M_uint64",
+      "stride": 1
+    },
+    {
+      "dataset": "data/sosd/osm_cellids_200M_uint64",
+      "stride": 4
+    }
+  ],
+  "matrix": {
+    "ops": [
+      20000000
+    ],
+    "workload": [
+      "read_heavy",
+      "write_heavy",
+      "append_only",
+      "shifting_hotspot"
+    ],
+    "mode": [
+      "throughput"
+    ]
+  },
+  "indexes": [
+    {
+      "label": "fixed_e16",
+      "args": [
+        "--index",
+        "fixed",
+        "--threshold",
+        "64",
+        "--epsilon",
+        "16",
+        "--seal-tail",
+        "1"
+      ]
+    },
+    {
+      "label": "adaptive_e16",
+      "args": [
+        "--index",
+        "adaptive",
+        "--margin",
+        "1",
+        "--half-life",
+        "22",
+        "--epsilon",
+        "16",
+        "--seal-tail",
+        "1"
+      ]
+    }
+  ]
+}

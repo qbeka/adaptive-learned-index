@@ -101,11 +101,11 @@ def static_section(name: str, title: str) -> tuple[list[str], dict]:
                 rows.append([label, epsilon, f"{median(r['ns_per_lookup'] for r in runs.values()):.0f}",
                              f"{median(r['p50_ns'] for r in runs.values())}",
                              f"{median(r['p99_ns'] for r in runs.values())}",
-                             f"{median(r['index_bytes_per_key'] for r in runs.values()):.4f}",
+                             f"{median(r['index_bytes'] / r['keys'] for r in runs.values()):.4f}",
                              fmt_ratio(vs_binary), vs_pgm])
                 facts[(dataset, label, epsilon)] = {
                     "ns": median(r["ns_per_lookup"] for r in runs.values()),
-                    "bytes_per_key": median(r["index_bytes_per_key"] for r in runs.values()),
+                    "bytes_per_key": median(r["index_bytes"] / r["keys"] for r in runs.values()),
                     "vs_binary": vs_binary,
                 }
         lines += table(["Index", "Epsilon", "ns per lookup", "p50 ns", "p99 ns", "Index bytes per key",
@@ -281,6 +281,36 @@ def decision_lines(decision: dict) -> list[str]:
     return lines + [""]
 
 
+def x_faster(ratio_of_time: float) -> str:
+    return f"{1 / ratio_of_time:.1f}x"
+
+
+def headline(decisions: list[dict], static: dict, update: dict) -> dict:
+    """The figures on the site. Each one is read from a verdict or a table above."""
+    primary, hostile, _ = decisions
+    wiki = static[("wiki_ts_200M_uint64", "this index", 16)]
+    hotspot = hostile["h1"]["ratio"]
+    writes = hostile["h2"]["per_workload"]["write_heavy"]
+    moved = primary["h3"]["per_workload"]["write_heavy"]
+    write_ratio = primary["h2"]["per_workload"]["write_heavy"]
+    alex = [update[("primary", w, "alex")][0] for w in WORKLOADS]
+    alex_memory = [update[("memory", "primary", w, "alex")] / update[("memory", "primary", w, "adaptive")] for w in WORKLOADS]
+    hostile_memory = hostile["memory"]["ratio_final_bytes"].values()
+    return {
+        "tiles": [
+            [x_faster(wiki["vs_binary"][0]), f"faster than binary search on Wikipedia timestamps, using {wiki['bytes_per_key']:.3f} index bytes per key"],
+            [f"{hotspot[0]:.2f}x", "throughput over a fixed threshold on data neither was tuned on"],
+            [f"{moved['fixed_bytes'] / 1e9:.0f} GB", f"of rebuild copying removed, with write throughput {100 * (write_ratio[0] - 1):.0f}% higher"],
+        ],
+        "rows": [
+            ["The verdict", "The claim I fixed in advance does not hold. On the primary data, the policy did not beat the best fixed threshold across all four workloads."],
+            ["Where it wins", f"On OpenStreetMap keys, which it was not tuned on, it beat the same fixed threshold by {hotspot[0]:.2f}x on a moving hotspot and {writes[0]:.2f}x on writes, at {100 * (min(hostile_memory) - 1):.0f} to {100 * (max(hostile_memory) - 1):.0f} percent more memory. That memory is over the limit I set, so the win does not count as the claim."],
+            ["What it saves", f"Under heavy writes on Wikipedia timestamps it moved {moved['adaptive_bytes'] / 1e9:.0f} GB where the fixed threshold moved {moved['fixed_bytes'] / 1e9:.0f} GB, and throughput rose by {100 * (write_ratio[0] - 1):.0f}%."],
+            ["Against ALEX", f"ALEX was faster everywhere, by {1 / max(alex):.1f}x to {1 / min(alex):.1f}x on the primary data, for {100 * (min(alex_memory) - 1):.0f} to {100 * (max(alex_memory) - 1):.0f} percent more memory. This index does not beat it on speed."],
+        ],
+    }
+
+
 def main() -> int:
     update = load(RESULTS / "update_final")
     latency = load(RESULTS / "update_latency")
@@ -309,6 +339,7 @@ def main() -> int:
     lines += static_lines + warm_lines + update_lines + build_section(update) + work_section(work)
     (RESULTS / "summary.md").write_text("\n".join(lines) + "\n")
     (RESULTS / "decisions.json").write_text(json.dumps(decisions, indent=2) + "\n")
+    (RESULTS / "headline.json").write_text(json.dumps(headline(decisions, static_facts, update_facts), indent=2) + "\n")
     print(f"wrote results/summary.md and results/decisions.json, 0 checksum mismatches across "
           f"{len(update) + len(latency) + len(memory) + len(work)} update processes")
     for decision in decisions:

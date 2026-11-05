@@ -3,6 +3,53 @@ window.RESULTS = {
  "quality": {
   "oracle_ops": 9874517,
   "line_coverage": 98.26,
-  "branch_coverage": 93.07
+  "branch_coverage": 93.07,
+  "mutation": {
+   "killed": 44,
+   "scored": 44,
+   "score_percent": 100.0,
+   "equivalent": 1
+  },
+  "fuzz": {
+   "ops": 2032984796,
+   "traces": 500000,
+   "rebuilds": 75511682,
+   "splits": 64361689,
+   "mismatches": 0
+  }
+ },
+ "headline": {
+  "tiles": [
+   [
+    "3.1x",
+    "faster than binary search on Wikipedia timestamps, using 0.021 index bytes per key"
+   ],
+   [
+    "1.54x",
+    "throughput over a fixed threshold on data neither was tuned on"
+   ],
+   [
+    "58 GB",
+    "of rebuild copying removed, with write throughput 8% higher"
+   ]
+  ],
+  "rows": [
+   [
+    "The verdict",
+    "The claim I fixed in advance does not hold. On the primary data, the policy did not beat the best fixed threshold across all four workloads."
+   ],
+   [
+    "Where it wins",
+    "On OpenStreetMap keys, which it was not tuned on, it beat the same fixed threshold by 1.54x on a moving hotspot and 1.50x on writes, at 6 to 7 percent more memory. That memory is over the limit I set, so the win does not count as the claim."
+   ],
+   [
+    "What it saves",
+    "Under heavy writes on Wikipedia timestamps it moved 0 GB where the fixed threshold moved 58 GB, and throughput rose by 8%."
+   ],
+   [
+    "Against ALEX",
+    "ALEX was faster everywhere, by 1.2x to 3.4x on the primary data, for 30 to 48 percent more memory. This index does not beat it on speed."
+   ]
+  ]
  }
 };

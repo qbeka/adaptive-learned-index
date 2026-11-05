@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1096 410" role="img" aria-label="Lookup time against index memory for each dataset">
+<style>
+  svg { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color-scheme: light dark; }
+  .bg { fill: #fcfcfb; }
+  .ink { fill: #111511; }
+  .muted { fill: #5a5e5a; }
+  .grid { stroke: #1115111f; stroke-width: 1; }
+  .axis { stroke: #1115114d; stroke-width: 1; }
+  .ref { stroke: #5a5e5a; stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .s0 { stroke: #2a78d6; fill: #2a78d6; }.s1 { stroke: #eb6834; fill: #eb6834; }.s2 { stroke: #1baf7a; fill: #1baf7a; }.s3 { stroke: #eda100; fill: #eda100; }
+  @media (prefers-color-scheme: dark) {
+    .bg { fill: #1a1a19; }
+    .ink { fill: #f0efec; }
+    .muted { fill: #c3c2b7; }
+    .grid { stroke: #f0efec24; }
+    .axis { stroke: #f0efec55; }
+    .ref { stroke: #c3c2b7; }
+    .s0 { stroke: #3987e5; fill: #3987e5; }.s1 { stroke: #d95926; fill: #d95926; }.s2 { stroke: #199e70; fill: #199e70; }.s3 { stroke: #c98500; fill: #c98500; }
+  }
+</style>
+<rect class="bg" width="1096" height="410"/>
+<text x="56.0" y="20.0" class="ink" font-size="15" text-anchor="start">Lookup time against index memory</text>
+<rect x="56" y="35" width="14" height="3" rx="1.5" class="s0" stroke="none"/>
+<text x="76.0" y="40.0" class="muted" font-size="12" text-anchor="start">This index</text>
+<rect x="160" y="35" width="14" height="3" rx="1.5" class="s1" stroke="none"/>
+<text x="180.0" y="40.0" class="muted" font-size="12" text-anchor="start">PGM-index</text>
+<line x1="286" x2="310" y1="36" y2="36" class="ref"/>
+<text x="316.0" y="40.0" class="muted" font-size="12" text-anchor="start">Sorted array, no index memory</text>
+<text x="56.0" y="68.0" class="ink" font-size="13" text-anchor="start">fb</text>
+<line x1="56" x2="356" y1="354.0" y2="354.0" class="grid"/>
+<text x="48.0" y="358.0" class="muted" font-size="12" text-anchor="end">0</text>
+<line x1="56" x2="356" y1="298.0" y2="298.0" class="grid"/>
+<text x="48.0" y="302.0" class="muted" font-size="12" text-anchor="end">10</text>
+<line x1="56" x2="356" y1="242.0" y2="242.0" class="grid"/>
+<text x="48.0" y="246.0" class="muted" font-size="12" text-anchor="end">20</text>
+<line x1="56" x2="356" y1="186.0" y2="186.0" class="grid"/>
+<text x="48.0" y="190.0" class="muted" font-size="12" text-anchor="end">30</text>
+<line x1="56" x2="356" y1="130.0" y2="130.0" class="grid"/>
+<text x="48.0" y="134.0" class="muted" font-size="12" text-anchor="end">40</text>
+<line x1="56" x2="356" y1="74.0" y2="74.0" class="grid"/>
+<text x="48.0" y="78.0" class="muted" font-size="12" text-anchor="end">50</text>
+<text x="56.0" y="372.0" class="muted" font-size="12" text-anchor="middle">0.0001</text>
+<text x="131.0" y="372.0" class="muted" font-size="12" text-anchor="middle">0.001</text>
+<text x="206.0" y="372.0" class="muted" font-size="12" text-anchor="middle">0.01</text>
+<text x="281.0" y="372.0" class="muted" font-size="12" text-anchor="middle">0.1</text>
+<text x="356.0" y="372.0" class="muted" font-size="12" text-anchor="middle">1</text>
+<line x1="56" x2="356" y1="354" y2="354" class="axis"/>
+<line x1="56" x2="356" y1="244.7" y2="244.7" class="ref"><title>sorted array 20 ns, n=5</title></line>
+<polyline points="259.1,250.6 214.0,258.4 180.6,265.7 147.1,262.7 94.7,274.9 94.7,276.4" fill="none" class="s0" stroke-width="2" style="fill:none"/>
+<circle cx="259.1" cy="250.6" r="4" class="s0" stroke="none"><title>ali epsilon 8: 18 ns, 0.051 bytes per key, n=5</title></circle>
+<circle cx="214.0" cy="258.4" r="4" class="s0" stroke="none"><title>ali epsilon 16: 17 ns, 0.013 bytes per key, n=5</title></circle>
+<circle cx="180.6" cy="265.7" r="4" class="s0" stroke="none"><title>ali epsilon 32: 16 ns, 0.005 bytes per key, n=5</title></circle>
+<circle cx="147.1" cy="262.7" r="4" class="s0" stroke="none"><title>ali epsilon 64: 16 ns, 0.002 bytes per key, n=5</title></circle>
+<circle cx="94.7" cy="274.9" r="4" class="s0" stroke="none"><title>ali epsilon 256: 14 ns, 0.000 bytes per key, n=5</title></circle>
+<circle cx="94.7" cy="276.4" r="4" class="s0" stroke="none"><title>ali epsilon 1024: 14 ns, 0.000 bytes per key, n=5</title></circle>
+<polyline points="223.8,268.9 184.5,267.7 156.9,264.7 141.8,281.0 107.9,269.2 107.9,248.0" fill="none" class="s1" stroke-width="2" style="fill:none"/>
+<circle cx="223.8" cy="268.9" r="4" class="s1" stroke="none"><title>pgm epsilon 8: 15 ns, 0.017 bytes per key, n=5</title></circle>
+<circle cx="184.5" cy="267.7" r="4" class="s1" stroke="none"><title>pgm epsilon 16: 15 ns, 0.005 bytes per key, n=5</title></circle>
+<circle cx="156.9" cy="264.7" r="4" class="s1" stroke="none"><title>pgm epsilon 32: 16 ns, 0.002 bytes per key, n=5</title></circle>
+<circle cx="141.8" cy="281.0" r="4" class="s1" stroke="none"><title>pgm epsilon 64: 13 ns, 0.001 bytes per key, n=5</title></circle>
+<circle cx="107.9" cy="269.2" r="4" class="s1" stroke="none"><title>pgm epsilon 256: 15 ns, 0.000 bytes per key, n=5</title></circle>
+<circle cx="107.9" cy="248.0" r="4" class="s1" stroke="none"><title>pgm epsilon 1024: 19 ns, 0.000 bytes per key, n=5</title></circle>
+<text x="400.0" y="68.0" class="ink" font-size="13" text-anchor="start">osm</text>
+<line x1="400" x2="700" y1="354.0" y2="354.0" class="grid"/>
+<line x1="400" x2="700" y1="298.0" y2="298.0" class="grid"/>
+<line x1="400" x2="700" y1="242.0" y2="242.0" class="grid"/>
+<line x1="400" x2="700" y1="186.0" y2="186.0" class="grid"/>
+<line x1="400" x2="700" y1="130.0" y2="130.0" class="grid"/>
+<line x1="400" x2="700" y1="74.0" y2="74.0" class="grid"/>
+<text x="400.0" y="372.0" class="muted" font-size="12" text-anchor="middle">0.0001</text>
+<text x="475.0" y="372.0" class="muted" font-size="12" text-anchor="middle">0.001</text>
+<text x="550.0" y="372.0" class="muted" font-size="12" text-anchor="middle">0.01</text>
+<text x="625.0" y="372.0" class="muted" font-size="12" text-anchor="middle">0.1</text>
+<text x="700.0" y="372.0" class="muted" font-size="12" text-anchor="middle">1</text>
+<line x1="400" x2="700" y1="354" y2="354" class="axis"/>
+<line x1="400" x2="700" y1="245.5" y2="245.5" class="ref"><title>sorted array 19 ns, n=5</title></line>
+<polyline points="682.9,212.5 661.6,221.9 640.4,217.6 618.1,215.1 576.1,205.7 540.8,194.6" fill="none" class="s0" stroke-width="2" style="fill:none"/>
+<circle cx="682.9" cy="212.5" r="4" class="s0" stroke="none"><title>ali epsilon 8: 25 ns, 0.591 bytes per key, n=5</title></circle>
+<circle cx="661.6" cy="221.9" r="4" class="s0" stroke="none"><title>ali epsilon 16: 24 ns, 0.307 bytes per key, n=5</title></circle>
+<circle cx="640.4" cy="217.6" r="4" class="s0" stroke="none"><title>ali epsilon 32: 24 ns, 0.161 bytes per key, n=5</title></circle>
+<circle cx="618.1" cy="215.1" r="4" class="s0" stroke="none"><title>ali epsilon 64: 25 ns, 0.081 bytes per key, n=5</title></circle>
+<circle cx="576.1" cy="205.7" r="4" class="s0" stroke="none"><title>ali epsilon 256: 26 ns, 0.022 bytes per key, n=5</title></circle>
+<circle cx="540.8" cy="194.6" r="4" class="s0" stroke="none"><title>ali epsilon 1024: 28 ns, 0.008 bytes per key, n=5</title></circle>
+<polyline points="653.8,155.8 633.5,154.4 611.6,197.1 590.6,195.1 551.5,184.2 520.3,211.1" fill="none" class="s1" stroke-width="2" style="fill:none"/>
+<circle cx="653.8" cy="155.8" r="4" class="s1" stroke="none"><title>pgm epsilon 8: 35 ns, 0.242 bytes per key, n=5</title></circle>
+<circle cx="633.5" cy="154.4" r="4" class="s1" stroke="none"><title>pgm epsilon 16: 36 ns, 0.130 bytes per key, n=5</title></circle>
+<circle cx="611.6" cy="197.1" r="4" class="s1" stroke="none"><title>pgm epsilon 32: 28 ns, 0.066 bytes per key, n=5</title></circle>
+<circle cx="590.6" cy="195.1" r="4" class="s1" stroke="none"><title>pgm epsilon 64: 28 ns, 0.035 bytes per key, n=5</title></circle>
+<circle cx="551.5" cy="184.2" r="4" class="s1" stroke="none"><title>pgm epsilon 256: 30 ns, 0.010 bytes per key, n=5</title></circle>
+<circle cx="520.3" cy="211.1" r="4" class="s1" stroke="none"><title>pgm epsilon 1024: 26 ns, 0.004 bytes per key, n=5</title></circle>
+<text x="744.0" y="68.0" class="ink" font-size="13" text-anchor="start">wiki</text>
+<line x1="744" x2="1044" y1="354.0" y2="354.0" class="grid"/>
+<line x1="744" x2="1044" y1="298.0" y2="298.0" class="grid"/>
+<line x1="744" x2="1044" y1="242.0" y2="242.0" class="grid"/>
+<line x1="744" x2="1044" y1="186.0" y2="186.0" class="grid"/>
+<line x1="744" x2="1044" y1="130.0" y2="130.0" class="grid"/>
+<line x1="744" x2="1044" y1="74.0" y2="74.0" class="grid"/>
+<text x="744.0" y="372.0" class="muted" font-size="12" text-anchor="middle">0.0001</text>
+<text x="819.0" y="372.0" class="muted" font-size="12" text-anchor="middle">0.001</text>
+<text x="894.0" y="372.0" class="muted" font-size="12" text-anchor="middle">0.01</text>
+<text x="969.0" y="372.0" class="muted" font-size="12" text-anchor="middle">0.1</text>
+<text x="1044.0" y="372.0" class="muted" font-size="12" text-anchor="middle">1</text>
+<line x1="744" x2="1044" y1="354" y2="354" class="axis"/>
+<line x1="744" x2="1044" y1="245.8" y2="245.8" class="ref"><title>sorted array 19 ns, n=5</title></line>
+<polyline points="974.7,240.5 933.0,250.0 902.0,248.9 884.8,245.0 857.7,225.3 827.8,226.1" fill="none" class="s0" stroke-width="2" style="fill:none"/>
+<circle cx="974.7" cy="240.5" r="4" class="s0" stroke="none"><title>ali epsilon 8: 20 ns, 0.119 bytes per key, n=5</title></circle>
+<circle cx="933.0" cy="250.0" r="4" class="s0" stroke="none"><title>ali epsilon 16: 19 ns, 0.033 bytes per key, n=5</title></circle>
+<circle cx="902.0" cy="248.9" r="4" class="s0" stroke="none"><title>ali epsilon 32: 19 ns, 0.013 bytes per key, n=5</title></circle>
+<circle cx="884.8" cy="245.0" r="4" class="s0" stroke="none"><title>ali epsilon 64: 19 ns, 0.008 bytes per key, n=5</title></circle>
+<circle cx="857.7" cy="225.3" r="4" class="s0" stroke="none"><title>ali epsilon 256: 23 ns, 0.003 bytes per key, n=5</title></circle>
+<circle cx="827.8" cy="226.1" r="4" class="s0" stroke="none"><title>ali epsilon 1024: 23 ns, 0.001 bytes per key, n=5</title></circle>
+<polyline points="939.9,213.8 905.9,226.2 880.2,217.5 869.8,209.6 844.9,229.1 829.8,230.5" fill="none" class="s1" stroke-width="2" style="fill:none"/>
+<circle cx="939.9" cy="213.8" r="4" class="s1" stroke="none"><title>pgm epsilon 8: 25 ns, 0.041 bytes per key, n=5</title></circle>
+<circle cx="905.9" cy="226.2" r="4" class="s1" stroke="none"><title>pgm epsilon 16: 23 ns, 0.014 bytes per key, n=5</title></circle>
+<circle cx="880.2" cy="217.5" r="4" class="s1" stroke="none"><title>pgm epsilon 32: 24 ns, 0.007 bytes per key, n=5</title></circle>
+<circle cx="869.8" cy="209.6" r="4" class="s1" stroke="none"><title>pgm epsilon 64: 26 ns, 0.005 bytes per key, n=5</title></circle>
+<circle cx="844.9" cy="229.1" r="4" class="s1" stroke="none"><title>pgm epsilon 256: 22 ns, 0.002 bytes per key, n=5</title></circle>
+<circle cx="829.8" cy="230.5" r="4" class="s1" stroke="none"><title>pgm epsilon 1024: 22 ns, 0.001 bytes per key, n=5</title></circle>
+<text x="576.0" y="398.0" class="muted" font-size="12" text-anchor="middle">Index bytes per key, log scale. Lower left is better.</text>
+<text transform="translate(14 214.0) rotate(-90)" class="muted" font-size="12" text-anchor="middle">ns per lookup</text>
+</svg>
