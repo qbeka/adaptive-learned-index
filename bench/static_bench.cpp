@@ -1,5 +1,5 @@
 // The static lookup experiment: one index, one dataset, one process, one JSON
-// line. scripts/bench_static.py runs this repeatedly and pairs the results.
+// line. scripts/run_experiment.py runs this repeatedly and pairs the results.
 //
 // Usage: static_bench --dataset PATH --index binary|ali|pgm --epsilon N
 //                     [--stride N] [--lookups N] [--passes N] [--latency N]

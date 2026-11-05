@@ -1,5 +1,5 @@
 // The update experiment: one index, one workload, one process, one JSON line.
-// scripts/bench_update.py runs this repeatedly and pairs the results.
+// scripts/run_experiment.py runs this repeatedly and pairs the results.
 //
 // Modes are separate runs on purpose. Per-operation clock reads and allocation
 // tracking both disturb timing, so only throughput mode gives a throughput
