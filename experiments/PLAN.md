@@ -125,3 +125,26 @@ to resume, so the quiet gate stays relaxed. The validation sweep continues from 
 saved runs with three processes at a time, because it only picks configurations and
 every replicate runs in shuffled order. Final measurements run one process at a
 time. No validation result had been analysed when this was decided.
+
+## Freeze, 4 November 2026
+
+The validation sweep finished with 468 of 468 runs and no checksum mismatch. Load
+before each run had a median of 153 and a range of 7 to 165, so neighbouring
+configurations differ by less than the noise. The selection rule was applied as
+written and chose:
+
+| Policy | Configuration | Validation geometric mean |
+|---|---|---|
+| Fixed | epsilon 16, threshold 64 | 3.00 Mops/s |
+| Adaptive | epsilon 8, margin 1, half-life 2^22 | 2.86 Mops/s |
+| B+ tree | 64 slots | 2.21 Mops/s |
+
+Adaptive did not win validation, and fixed enters the test as the favourite.
+
+Test runs are frozen in `experiments/update_final.json` (throughput, 8 seeds),
+`update_latency.json` and `update_memory.json` (3 seeds, because percentiles and
+memory vary little between seeds), and `update_work.json` (instrumented, 3 seeds,
+learned policies only). The hypotheses, decision rule and memory limit do not
+change. All four use 20M operations and the three data variants above.
+
+The memory and work runs use four parallel jobs, because neither reports timing.
