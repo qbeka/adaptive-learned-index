@@ -83,7 +83,7 @@ Marcus et al., PVLDB 14(1), 2020. Repository pinned at commit `f52f4cb`, GPLv3.
   become one entry whose value is the sum of the run's positions. An exact lookup
   therefore still returns the expected checksum. The payload is the position,
   where SOSD uses a random value.
-- **Licence:** no SOSD code is copied, because it is GPLv3.
+- **Licence:** SOSD is GPLv3, so no source file is copied. `bench/sosd.h` reimplements the procedure, and its three-line xorshift generator matches SOSD so that seeds give the same lookups.
 
 ### tlx B+ tree
 
@@ -212,15 +212,37 @@ cannot cause repeated rebuilds, which was false as worded.
 
 10. **Selection compared two things at once.** The rule picked epsilon 8 for adaptive
     and epsilon 16 for fixed, so the verdict mixes policy and epsilon. An exploratory
-    run at equal epsilon moved `read_heavy` from 0.821 to 0.970. Tuning should have
-    held epsilon fixed across the policies.
+    run at equal epsilon moved `read_heavy` from 0.821 to 0.970, and moved
+    `write_heavy` from 1.076 to 0.879. Tuning should have held epsilon fixed across
+    the policies.
 
 11. **Tuning on a loaded machine.** The validation sweep ran at median load 153, so
     neighbouring configurations differ by less than the noise, and the chosen
     settings may not be the best. The final runs repeated on a quiet machine, but
     the sweep did not.
 
-## Independent review
+12. **No near-never-merge control in the plan.** On full-size data the policy made
+    almost no rebuilds, so comparing it with threshold 64 only showed that merging
+    did not pay. I first wrote this up as a policy win. Review caught it, and a control
+    at threshold 4095 matched or beat adaptive there. The same control on small data
+    is where the policy earned its keep, at 1.300 [1.286, 1.313]. The plan should have
+    bracketed the policy with both extremes from the start.
+
+13. **"58 GB of copying" was mostly directory shifting.** `bytes_moved` adds merged
+    entries and shifted directory slots, and I quoted the total as rebuild copying.
+    Merged keys were 3.43 GB of it. The flat directory is the larger cost, and I did not
+    see that until review separated the two.
+
+14. **A mutation list has blind spots.** After 44 of 44, a reviewer wrote 27 new mutants
+    and 17 survived, including `lower_bound` earning no read and merge cost never
+    being learned. Those paths passed every correctness check, because a policy bug
+    costs time and never an answer. That is the design working, and it is also why
+    answer-level tests could not see them.
+
+## Independent reviews
+
+Both reviews were done by separate AI agents, not by a person.
+
 
 A separate agent reviewed commit `9d6ba6d` against written acceptance criteria,
 working from its own clone.
@@ -233,6 +255,12 @@ working from its own clone.
 - **Fixed:** the truncation above, a use-after-free when a `scan` visitor calls back
   into the index, now a documented contract rule, undefined behaviour for a
   half-life of 2^64 or more, and the false hysteresis claim above.
+
+A second agent reviewed commit `154823c` from its own clone before publishing. It
+recomputed the report's numbers from raw data and found 2 wrong figures, no wrong
+answer and no broken invariant. Its main findings were about interpretation: items
+12 and 13 above, an overclaimed write win, a memory explanation aimed at the wrong
+workload, and selective latency rows. All are corrected in the report.
 
 ## Retained optimizations
 

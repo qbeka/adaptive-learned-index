@@ -21,6 +21,8 @@ PURPOSE = {
     "update_memory": "Memory at allocator capacity",
     "update_work": "Work counters, instrumented binary, never timed",
     "update_same_epsilon": "Exploratory, same epsilon for both policies, decides nothing",
+    "update_never_merge": "Exploratory, control that almost never merges, full-size data, decides nothing",
+    "update_never_merge_warm": "Exploratory, same control on small data, decides nothing",
     "static_final": "Static lookups, full datasets",
     "static_warm": "Static lookups, data fits in cache",
 }

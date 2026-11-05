@@ -1,40 +1,40 @@
 {
-  "commit": "caee662406db0fd569443d6d3726ec682cb52767",
-  "mutants": 45,
-  "killed": 44,
+  "commit": "07e80b235ad13685e6daf2dbe3dd908ba9a2bdd8",
+  "mutants": 72,
+  "killed": 69,
   "survived": [],
   "invalid": [],
-  "equivalent": 1,
-  "scored": 44,
+  "equivalent": 3,
+  "scored": 69,
   "score_percent": 100.0,
   "rows": [
     {
       "name": "window hi loses the absent-key slot",
       "file": "include/ali/segment.h",
       "outcome": "killed",
-      "detail": "test_dynamic: tests/test_dynamic.cpp:385: check failed: index.widened_searches() == 0",
-      "seconds": 1.9
+      "detail": "test_dynamic: tests/test_dynamic.cpp:545: check failed: index.widened_searches() == 0",
+      "seconds": 1.7
     },
     {
       "name": "window lo ignores over",
       "file": "include/ali/segment.h",
       "outcome": "killed",
-      "detail": "test_dynamic: tests/test_dynamic.cpp:385: check failed: index.widened_searches() == 0",
-      "seconds": 2.3
+      "detail": "test_dynamic: tests/test_dynamic.cpp:545: check failed: index.widened_searches() == 0",
+      "seconds": 1.6
     },
     {
       "name": "prediction not clamped to n",
       "file": "include/ali/segment.h",
       "outcome": "killed",
       "detail": "test_dynamic: crashed",
-      "seconds": 1.8
+      "seconds": 1.9
     },
     {
       "name": "bracket check removed",
       "file": "include/ali/segment.h",
       "outcome": "killed",
       "detail": "test_static: tests/test_static.cpp:211: check failed: apply_op(index, op) == apply_op(oracle, op)",
-      "seconds": 12.6
+      "seconds": 11.6
     },
     {
       "name": "bracket check ignores left neighbour",
@@ -47,8 +47,8 @@
       "name": "over measured with wrong sign",
       "file": "include/ali/segment.h",
       "outcome": "killed",
-      "detail": "test_dynamic: tests/test_dynamic.cpp:385: check failed: index.widened_searches() == 0",
-      "seconds": 2.5
+      "detail": "test_dynamic: tests/test_dynamic.cpp:545: check failed: index.widened_searches() == 0",
+      "seconds": 2.1
     },
     {
       "name": "under never measured",
@@ -62,20 +62,20 @@
       "file": "include/ali/segment.h",
       "outcome": "killed",
       "detail": "test_dynamic: tests/test_dynamic.cpp:70: check failed: index.stats().rebuilds == 1",
-      "seconds": 1.5
+      "seconds": 1.4
     },
     {
       "name": "cone lower bound not tightened",
       "file": "include/ali/segment.h",
       "outcome": "killed",
       "detail": "test_static: tests/test_static.cpp:86: check failed: index.max_window() <= 2",
-      "seconds": 6.0
+      "seconds": 5.8
     },
     {
       "name": "cone never ends a segment",
       "file": "include/ali/segment.h",
       "outcome": "killed",
-      "detail": "test_dynamic: tests/test_dynamic.cpp:385: check failed: index.widened_searches() == 0",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:545: check failed: index.widened_searches() == 0",
       "seconds": 3.4
     },
     {
@@ -103,64 +103,64 @@
       "name": "search keeps wrong half",
       "file": "include/ali/types.h",
       "outcome": "killed",
-      "detail": "test_dynamic: tests/test_dynamic.cpp:385: check failed: index.widened_searches() == 0",
-      "seconds": 1.6
+      "detail": "test_dynamic: tests/test_dynamic.cpp:545: check failed: index.widened_searches() == 0",
+      "seconds": 1.5
     },
     {
       "name": "duplicates keep the first value",
       "file": "include/ali/types.h",
       "outcome": "killed",
-      "detail": "test_dynamic: tests/test_dynamic.cpp:347: check failed: apply_op(index, op) == apply_op(oracle, op)",
-      "seconds": 1.9
+      "detail": "test_dynamic: tests/test_dynamic.cpp:507: check failed: apply_op(index, op) == apply_op(oracle, op)",
+      "seconds": 2.0
     },
     {
       "name": "unsorted input accepted",
       "file": "include/ali/types.h",
       "outcome": "killed",
       "detail": "test_dynamic: tests/test_dynamic.cpp:249: check failed: threw",
-      "seconds": 1.4
+      "seconds": 1.5
     },
     {
       "name": "range upper bound inclusive",
       "file": "include/ali/types.h",
       "outcome": "killed",
       "detail": "test_dynamic: tests/test_dynamic.cpp:51: check failed: index.scan({0, kMax}, [](const Entry&) {}) == 3",
-      "seconds": 1.4
+      "seconds": 1.5
     },
     {
       "name": "static route takes the wrong segment",
       "file": "include/ali/static_index.h",
       "outcome": "killed",
       "detail": "test_static: tests/test_static.cpp:123: check failed: index.lookup(5000) == Value{2500}",
-      "seconds": 6.4
+      "seconds": 6.1
     },
     {
       "name": "static bulk load clears before validating",
       "file": "include/ali/static_index.h",
       "outcome": "killed",
       "detail": "test_static: tests/test_static.cpp:163: check failed: index.lookup(2) == Value{20}",
-      "seconds": 6.4
+      "seconds": 6.3
     },
     {
       "name": "dynamic bulk load clears before validating",
       "file": "include/ali/dynamic_index.h",
       "outcome": "killed",
       "detail": "test_dynamic: tests/test_dynamic.cpp:250: check failed: index.lookup(3) == Value{30}",
-      "seconds": 1.7
+      "seconds": 1.5
     },
     {
       "name": "lookup skips the delta",
       "file": "include/ali/dynamic_index.h",
       "outcome": "killed",
       "detail": "test_dynamic: tests/test_dynamic.cpp:35: check failed: index.lookup(5) == Value{51}",
-      "seconds": 1.6
+      "seconds": 1.5
     },
     {
       "name": "lower_bound ignores the delta",
       "file": "include/ali/dynamic_index.h",
       "outcome": "killed",
       "detail": "test_dynamic: tests/test_dynamic.cpp:92: check failed: got == want",
-      "seconds": 1.8
+      "seconds": 1.5
     },
     {
       "name": "lower_bound prefers delta over a smaller base key",
@@ -181,49 +181,49 @@
       "file": "include/ali/dynamic_index.h",
       "outcome": "killed",
       "detail": "test_dynamic: tests/test_dynamic.cpp:68: check failed: index.stats().rebuilds == 0",
-      "seconds": 1.6
+      "seconds": 1.4
     },
     {
       "name": "write to a delta key adds a duplicate",
       "file": "include/ali/dynamic_index.h",
       "outcome": "killed",
       "detail": "test_dynamic: libc++abi: terminating due to uncaught exception of type std::logic_error: keys not strictly increasing",
-      "seconds": 1.6
+      "seconds": 1.4
     },
     {
       "name": "delta insert does not count towards size",
       "file": "include/ali/dynamic_index.h",
       "outcome": "killed",
       "detail": "test_dynamic: tests/test_dynamic.cpp:36: check failed: index.size() == 1",
-      "seconds": 1.6
+      "seconds": 1.4
     },
     {
       "name": "rebuild loses delta values",
       "file": "include/ali/dynamic_index.h",
       "outcome": "killed",
       "detail": "test_dynamic: tests/test_dynamic.cpp:47: check failed: index.lookup(kMax) == Value{1}",
-      "seconds": 1.6
+      "seconds": 1.4
     },
     {
       "name": "rebuild merge drops the last delta key",
       "file": "include/ali/dynamic_index.h",
       "outcome": "killed",
       "detail": "test_dynamic: libc++abi: terminating due to uncaught exception of type std::logic_error: size mismatch",
-      "seconds": 1.7
+      "seconds": 1.5
     },
     {
       "name": "split leaves stale routing keys",
       "file": "include/ali/dynamic_index.h",
       "outcome": "killed",
       "detail": "test_dynamic: libc++abi: terminating due to uncaught exception of type std::logic_error: stale routing key",
-      "seconds": 1.7
+      "seconds": 1.5
     },
     {
       "name": "scan ignores the delta",
       "file": "include/ali/dynamic_index.h",
       "outcome": "killed",
-      "detail": "test_dynamic: tests/test_dynamic.cpp:347: check failed: apply_op(index, op) == apply_op(oracle, op)",
-      "seconds": 1.9
+      "detail": "test_dynamic: tests/test_dynamic.cpp:507: check failed: apply_op(index, op) == apply_op(oracle, op)",
+      "seconds": 1.5
     },
     {
       "name": "scan visits an empty range",
@@ -235,14 +235,14 @@
       "name": "rank ignores the delta",
       "file": "include/ali/dynamic_index.h",
       "outcome": "killed",
-      "detail": "test_dynamic: tests/test_dynamic.cpp:347: check failed: apply_op(index, op) == apply_op(oracle, op)",
-      "seconds": 1.7
+      "detail": "test_dynamic: tests/test_dynamic.cpp:507: check failed: apply_op(index, op) == apply_op(oracle, op)",
+      "seconds": 1.6
     },
     {
       "name": "rank ignores earlier deltas",
       "file": "include/ali/dynamic_index.h",
       "outcome": "killed",
-      "detail": "test_dynamic: tests/test_dynamic.cpp:347: check failed: apply_op(index, op) == apply_op(oracle, op)",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:507: check failed: apply_op(index, op) == apply_op(oracle, op)",
       "seconds": 1.5
     },
     {
@@ -250,7 +250,7 @@
       "file": "include/ali/dynamic_index.h",
       "outcome": "killed",
       "detail": "test_dynamic: tests/test_dynamic.cpp:234: check failed: memory.capacity < memory.total_used() + 64 * sizeof(Entry) + 8192",
-      "seconds": 1.5
+      "seconds": 1.6
     },
     {
       "name": "seal applies when delta overlaps the base",
@@ -263,8 +263,8 @@
       "name": "delta capacity never forces a rebuild",
       "file": "include/ali/dynamic_index.h",
       "outcome": "killed",
-      "detail": "test_dynamic: libc++abi: terminating due to uncaught exception of type std::logic_error: delta over its cap",
-      "seconds": 3.7
+      "detail": "test_dynamic: tests/test_dynamic.cpp:382: check failed: index.stats().rebuilds == 2",
+      "seconds": 1.5
     },
     {
       "name": "counters never decay",
@@ -277,7 +277,7 @@
       "name": "half-life not clamped",
       "file": "include/ali/policy.h",
       "outcome": "killed",
-      "detail": "test_dynamic: tests/test_dynamic.cpp:264: check failed: idle.reads == 200",
+      "detail": "test_dynamic: include/ali/policy.h:203:47: runtime error: shift exponent 200 is too large for 64-bit type 'std::uint64_t' (aka 'unsigned long long')\nSUMMARY: UndefinedBehavio",
       "seconds": 1.5
     },
     {
@@ -292,34 +292,221 @@
       "file": "include/ali/policy.h",
       "outcome": "killed",
       "detail": "test_dynamic: tests/test_dynamic.cpp:296: check failed: !policy.should_rebuild_after_write(few_samples, enough_buffer)",
-      "seconds": 1.4
+      "seconds": 1.5
     },
     {
       "name": "minimum delta ignored",
       "file": "include/ali/policy.h",
       "outcome": "killed",
       "detail": "test_dynamic: tests/test_dynamic.cpp:301: check failed: !policy.should_rebuild_after_write(enough_samples, small_buffer)",
-      "seconds": 1.4
+      "seconds": 1.5
     },
     {
       "name": "refill not modelled",
       "file": "include/ali/policy.h",
       "outcome": "killed",
-      "detail": "test_dynamic: tests/test_dynamic.cpp:336: check failed: index.stats().rebuilds * 300 <= reads_of_delta",
-      "seconds": 1.5
+      "detail": "test_dynamic: tests/test_dynamic.cpp:496: check failed: index.stats().rebuilds * 300 <= reads_of_delta",
+      "seconds": 1.6
     },
     {
       "name": "reads earn nothing",
       "file": "include/ali/policy.h",
       "outcome": "killed",
       "detail": "test_dynamic: tests/test_dynamic.cpp:190: check failed: index.stats().rebuilds == 1",
-      "seconds": 1.4
+      "seconds": 1.6
     },
     {
       "name": "calibration can be optimised away",
       "file": "include/ali/policy.h",
       "outcome": "killed",
       "detail": "test_dynamic: tests/test_dynamic.cpp:309: check failed: policy.ns_per_shifted_entry() > 0.001",
+      "seconds": 1.6
+    },
+    {
+      "name": "bytes_moved omits directory shift",
+      "file": "include/ali/dynamic_index.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:435: check failed: shifted > 0",
+      "seconds": 1.6
+    },
+    {
+      "name": "bytes_moved omits merged bytes",
+      "file": "include/ali/dynamic_index.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:117: check failed: stats.bytes_moved >= stats.keys_merged * sizeof(Entry)",
+      "seconds": 1.6
+    },
+    {
+      "name": "keys_merged not counted",
+      "file": "include/ali/dynamic_index.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:116: check failed: stats.keys_merged >= 1000",
+      "seconds": 1.6
+    },
+    {
+      "name": "seal keys_merged not counted",
+      "file": "include/ali/dynamic_index.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:443: check failed: seal.stats().keys_merged == 32",
+      "seconds": 1.6
+    },
+    {
+      "name": "seal bytes omit tail shift",
+      "file": "include/ali/dynamic_index.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:444: check failed: seal.stats().bytes_moved > 32 * sizeof(Entry)",
+      "seconds": 1.6
+    },
+    {
+      "name": "forced_rebuilds not counted",
+      "file": "include/ali/dynamic_index.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:383: check failed: index.stats().forced_rebuilds == 1",
+      "seconds": 1.6
+    },
+    {
+      "name": "worst_ns not tracked",
+      "file": "include/ali/dynamic_index.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:431: check failed: stats.worst_ns > 0",
+      "seconds": 1.6
+    },
+    {
+      "name": "write saving dropped",
+      "file": "include/ali/policy.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:332: check failed: policy.expected_saving_ns(state, leaf) == 100 * policy.ns_per_shifted_entry() * 50 / 2",
+      "seconds": 1.6
+    },
+    {
+      "name": "read saving log removed",
+      "file": "include/ali/policy.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:213: check failed: read_part_with_refill < policy.expected_saving_ns(state, small)",
+      "seconds": 1.4
+    },
+    {
+      "name": "merge cost ignores base",
+      "file": "include/ali/policy.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:163: check failed: index.stats().rebuilds == 0",
+      "seconds": 1.4
+    },
+    {
+      "name": "margin not added to one",
+      "file": "include/ali/policy.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:380: check failed: index.stats().rebuilds == 1",
+      "seconds": 1.7
+    },
+    {
+      "name": "read check every time",
+      "file": "include/ali/policy.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:340: check failed: !policy.should_rebuild_after_read(state, leaf)",
+      "seconds": 1.5
+    },
+    {
+      "name": "reads never checked",
+      "file": "include/ali/policy.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:190: check failed: index.stats().rebuilds == 1",
+      "seconds": 1.5
+    },
+    {
+      "name": "merge cost never learned",
+      "file": "include/ali/policy.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:355: check failed: policy.ns_per_merged_key() == 21.25",
+      "seconds": 1.5
+    },
+    {
+      "name": "read cost never learned",
+      "file": "include/ali/policy.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:353: check failed: policy.ns_per_step() == 30.0",
+      "seconds": 1.5
+    },
+    {
+      "name": "rebuild does not clear counters",
+      "file": "include/ali/dynamic_index.h",
+      "outcome": "equivalent",
+      "detail": "A rebuild creates new leaves, and new counters already start at zero, so this reset only records the epoch."
+    },
+    {
+      "name": "seal does not clear counters",
+      "file": "include/ali/dynamic_index.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:395: check failed: index.last_rebuild().expected_saving_ns == writes_only_saving(index, 64, 64)",
+      "seconds": 1.6
+    },
+    {
+      "name": "scan pays no delta read",
+      "file": "include/ali/dynamic_index.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:410: check failed: by_scan.stats().rebuilds == 1",
+      "seconds": 1.5
+    },
+    {
+      "name": "lower_bound earns no read",
+      "file": "include/ali/dynamic_index.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:402: check failed: by_lower_bound.stats().rebuilds == 1",
+      "seconds": 1.5
+    },
+    {
+      "name": "widen left bound off by one",
+      "file": "include/ali/segment.h",
+      "outcome": "killed",
+      "detail": "test_static: crashed",
+      "seconds": 6.1
+    },
+    {
+      "name": "widen left loop gives up",
+      "file": "include/ali/segment.h",
+      "outcome": "killed",
+      "detail": "test_static: tests/test_static.cpp:226: check failed: widen_lower_bound(keys.data(), keys.size(), start, key) == want",
+      "seconds": 6.1
+    },
+    {
+      "name": "fraction overflow guard",
+      "file": "include/ali/segment.h",
+      "outcome": "killed",
+      "detail": "test_static: tests/test_static.cpp:86: check failed: index.max_window() <= 2",
+      "seconds": 6.0
+    },
+    {
+      "name": "seal drops empty-base guard",
+      "file": "include/ali/dynamic_index.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: crashed",
+      "seconds": 1.5
+    },
+    {
+      "name": "segment cap clamp removed",
+      "file": "include/ali/segment.h",
+      "outcome": "equivalent",
+      "detail": "Needs one segment of more than 2^31 keys, which no test can hold in memory."
+    },
+    {
+      "name": "decay halvings not capped",
+      "file": "include/ali/policy.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: include/ali/policy.h:212:17: runtime error: shift exponent 33 is too large for 32-bit type 'std::uint32_t' (aka 'unsigned int')\nSUMMARY: UndefinedBehaviorSaniti",
+      "seconds": 1.4
+    },
+    {
+      "name": "bulk_load keeps old stats",
+      "file": "include/ali/dynamic_index.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:461: check failed: index.stats().rebuilds == 0",
+      "seconds": 1.5
+    },
+    {
+      "name": "memory capacity omits delta",
+      "file": "include/ali/dynamic_index.h",
+      "outcome": "killed",
+      "detail": "test_dynamic: tests/test_dynamic.cpp:470: check failed: index.memory().capacity >= before + 100 * sizeof(Entry)",
       "seconds": 1.4
     }
   ]

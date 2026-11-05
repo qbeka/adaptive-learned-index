@@ -15,3 +15,5 @@ download script. These datasets are not redistributed here. Their terms are set
 by SOSD and the original data owners.
 
 File format: one little-endian `uint64` count, then the keys in sorted order.
+
+`site/recording.js` holds about 210 keys from `wiki_ts` for the replay. No dataset file is stored in this repository.

@@ -1,6 +1,6 @@
 # Benchmark report
 
-Measured on 5 November 2026 on an Apple M5 Pro with 48 GiB of RAM. Every number here comes from a run listed in [results/ARTIFACTS.md](../results/ARTIFACTS.md). All tables are in [results/summary.md](../results/summary.md), generated from raw data by `scripts/summarize.py`.
+Measured on 5 November 2026 on an Apple M5 Pro with 48 GiB of RAM. Every benchmark number here comes from a run listed in [results/ARTIFACTS.md](../results/ARTIFACTS.md). The routing percentages are diagnostics, recorded only in this report and in [RESEARCH.md](RESEARCH.md). All tables are in [results/summary.md](../results/summary.md), generated from raw data by `scripts/summarize.py`.
 
 ## Result
 
@@ -15,11 +15,12 @@ Measured on 5 November 2026 on an Apple M5 Pro with 48 GiB of RAM. Every number 
 
 Brackets are 95 percent paired bootstrap intervals. One replicate is one seed. Rules are in [experiments/PLAN.md](../experiments/PLAN.md), fixed before any test data was read.
 
-Three findings are still useful:
+The rest of this page says why, and what the failure taught me. Items marked exploratory were designed after the verdict, use test seeds, and decide nothing.
 
-1. **A tuned threshold does not travel.** Fixed was tuned on Wikipedia timestamps. On OpenStreetMap keys, adaptive beat it by 1.535x [1.419, 1.666] on the moving hotspot and 1.495x [1.432, 1.560] on writes, with no retuning. It used 5.8 to 7.0 percent more memory, which is over my limit, so this does not count as a win under the rule.
-2. **Most rebuilds were not worth doing.** On `write_heavy`, fixed moved 58 GB in 187,702 rebuilds. Adaptive moved nothing, and its throughput was 1.076x [1.033, 1.142] higher.
-3. **ALEX is faster.** It beat this index by 1.2x to 3.4x on the primary data, using 30 to 48 percent more memory. Nothing here beats ALEX on speed.
+1. **On full-size data, rebuilds barely paid.** The policy made 0 to 2 ordinary rebuilds per process. A threshold that almost never merges did as well or better: adaptive over it was 0.981 [0.957, 1.005] on primary data and 0.956 [0.930, 0.984] on hostile data (exploratory).
+2. **On small data, rebuilds paid and the policy found them.** Adaptive beat the tuned threshold by 1.087x [1.030, 1.138] and the near-never-merge threshold by 1.300x [1.286, 1.313] (exploratory). No fixed setting I tried did well at both sizes, and the policy needed no retuning.
+3. **A threshold tuned on one dataset does not travel.** Threshold 64, tuned on Wikipedia timestamps, lost to adaptive by 1.535x [1.419, 1.666] on the OpenStreetMap moving hotspot. That is mostly the cost of merging when merging does not pay, because the near-never-merge threshold did even better there. Adaptive also used 5.8 to 7.0 percent more memory on that data, which is over my limit, so this is not a win under the rule.
+4. **ALEX is faster.** It beat this index by 1.2x to 3.4x on the primary data, using 30 to 48 percent more memory.
 
 ## What ran
 
@@ -43,7 +44,7 @@ Three findings are still useful:
 
 ## Update throughput
 
-Million operations per second, median of 8 seeds. Each ratio is adaptive over that index.
+Million operations per second, median of 8 seeds. Each ratio is adaptive over that index, as a geometric mean of paired seeds, so a ratio and the medians can point different ways, as on the `shifting_hotspot` row.
 
 **Primary**
 
@@ -63,7 +64,7 @@ Million operations per second, median of 8 seeds. Each ratio is adaptive over th
 | `append_only` | 7.88 | 8.49 | 9.87 | 10.71 | 0.952 [0.843, 1.056] | 0.867 [0.785, 0.953] |
 | `shifting_hotspot` | 9.26 | 5.96 | 17.17 | 9.97 | 1.535 [1.419, 1.666] | 0.557 [0.490, 0.638] |
 
-On warm data, adaptive reached 31 to 48 Mops/s against 30 to 40 for fixed and 61 to 114 for ALEX. H1 and H2 both hold there, at 1.144 [1.025, 1.257] and 1.087 [1.030, 1.138], with memory in limit. That split is secondary, so it does not rescue the claim.
+On warm data, adaptive reached 31 to 48 Mops/s against 30 to 40 for fixed and 61 to 114 for ALEX. H1 and H2 both pass there, at 1.144 [1.025, 1.257] and 1.087 [1.030, 1.138], with memory in limit. That split is secondary, so it does not rescue the claim. H2 also depends on two things: the rule tests whether each workload's interval reaches 0.95, which is a lenient reading, and `write_heavy` sits at 0.898 [0.805, 0.979]. On the loaded run, warm H2 failed.
 
 ### Through a distribution shift
 
@@ -75,20 +76,23 @@ Each vertical line is a hotspot move. On hostile data, the fixed threshold drops
 
 ## Why the primary result is negative
 
-The tuning rule picked a different epsilon for each policy, so the headline compares two things at once. I ran an extra comparison at epsilon 16 for both. It is exploratory, was designed after I saw the result, and decides nothing. See `results/update_same_epsilon`.
+All tables in this section are exploratory.
 
-| Data | Workload | Adaptive over fixed, both at epsilon 16 |
+**Tuning mixed two things.** The rule picked epsilon 8 for adaptive and epsilon 16 for fixed. At epsilon 16 for both, the primary geometric mean is 0.970 [0.913, 1.020], too close to separate. `read_heavy` moves from 0.821 to 0.970, so most of that loss was epsilon. `write_heavy` moves the other way, from 1.076 to 0.879 [0.832, 0.912], so at equal epsilon, merging did pay on that workload. The hostile geometric mean stays at 1.259 [1.202, 1.308].
+
+**The policy mostly chose not to act.** So I compared it with a threshold of 4095, one below the buffer cap, at the same epsilon:
+
+| Data | Adaptive over threshold 4095 | Adaptive ordinary rebuilds, per workload |
 |---|---|---|
-| Primary | `read_heavy` | 0.970 [0.940, 1.001] |
-| Primary | `write_heavy` | 0.879 [0.832, 0.912] |
-| Primary | `append_only` | 1.074 [0.938, 1.201] |
-| Primary | `shifting_hotspot` | 0.967 [0.792, 1.139] |
-| Primary | Geometric mean | 0.970 [0.913, 1.020] |
-| Hostile | Geometric mean | 1.259 [1.202, 1.308] |
+| Primary | 0.981 [0.957, 1.005] | 1, 0, 0, 2 |
+| Hostile | 0.956 [0.930, 0.984] | 2, 0, 0, 1 |
+| Warm | 1.300 [1.286, 1.313] | 894, 223, 0, 43 |
 
-So most of the `read_heavy` loss came from epsilon, not from the policy. At equal epsilon, the primary comparison is too close to separate, and the hostile win remains. A second pass would tune adaptive and fixed at one shared epsilon.
+The order is `read_heavy`, `write_heavy`, `append_only`, `shifting_hotspot`, with medians rounded up. Warm `append_only` is the one workload where adaptive lost, at 0.917 [0.895, 0.937].
 
-Epsilon 8 also explains most of the memory gap: 160,858 leaves against 69,305 on `shifting_hotspot`, which costs 0.44 bytes per key in directory and models against 0.18.
+So my answer to the research question is about scale. With 20M operations across 24M to 43M keys, each leaf sees too few writes for a merge to earn its cost, and doing nothing is right. With 20M operations across 46,000 keys, merges pay many times over. The policy got both right without retuning, which a single threshold did not. On full-size data it paid a small price, up to about 4 percent, for the rebuilds and bookkeeping it did.
+
+A longer trace on full-size data might change this. I did not test one.
 
 ## Rebuild work
 
@@ -105,9 +109,11 @@ Medians of 8 seeds on the quiet run. Counts for a fixed policy do not depend on 
 | Hostile | `write_heavy` | Adaptive | 0 | 0 | 0 | 0 |
 | Hostile | `write_heavy` | Fixed | 87,456 | 24,923,810 | 152.65 | 5,048 us |
 
+**Most of those bytes are not key data.** GB moved adds merged entries and directory slots shifted on a split. On primary `write_heavy`, merged keys account for 3.43 GB of 58.46 GB. On hostile, 0.40 GB of 152.65 GB. The rest is 94 to 99.7 percent shifting of the flat directory array, a cost of that design that I had not separated before review. A tree or two-level directory would remove it.
+
 H3 fails as written on hostile data, because fixed moved nothing on `read_heavy` and adaptive made one small rebuild, and on warm data, where `append_only` is 1.001. On `append_only`, tail sealing does the same work for both policies.
 
-Adaptive pays for skipping rebuilds. On primary `write_heavy` it shifted 444,743,743 buffered entries against 214,363,912, and made 110,455,603 buffer search steps against 78,475,512. Those figures come from the instrumented binary, which is never timed.
+Skipping rebuilds has a price. On primary `write_heavy`, adaptive shifted 444,743,743 buffered entries against 214,363,912, and made 110,455,603 buffer search steps against 78,475,512. Those figures come from the instrumented binary, which is never timed.
 
 ## Latency
 
@@ -123,8 +129,18 @@ Nanoseconds, median of 3 seeds, with each value including one clock read. Warm v
 | Primary | `write_heavy` | Fixed | 250 | 917 | 333 | 4,542 | 14.4 ms |
 | Primary | `write_heavy` | ALEX | 83 | 375 | 167 | 541 | 2.2 ms |
 | Primary | `write_heavy` | B+ tree | 291 | 833 | 500 | 1,083 | 8.9 ms |
+| Hostile | `read_heavy` | Adaptive | 250 | 750 | 375 | 833 | 1.5 ms |
+| Hostile | `read_heavy` | Fixed | 250 | 750 | 333 | 791 | 1.5 ms |
+| Hostile | `read_heavy` | ALEX | 167 | 584 | 375 | 875 | 7.7 ms |
+| Hostile | `read_heavy` | B+ tree | 209 | 750 | 417 | 1,667 | 3.5 ms |
+| Hostile | `write_heavy` | Adaptive | 291 | 875 | 416 | 1,000 | 3.9 ms |
+| Hostile | `write_heavy` | Fixed | 250 | 709 | 375 | 958 | 2.2 ms |
+| Hostile | `write_heavy` | ALEX | 167 | 583 | 333 | 1,084 | 10.8 ms |
+| Hostile | `write_heavy` | B+ tree | 250 | 709 | 417 | 834 | 2.5 ms |
 
-Adaptive cut write p99 by 3.6x and the worst pause by 6.7x on `write_heavy`, because it stopped merging. Its write p50 is higher, because the buffers are larger.
+On primary `write_heavy`, adaptive's write p99 was 3.6x lower than fixed's. That does not carry over to hostile data, where the two are level. Adaptive's write p50 is higher, because its buffers are larger.
+
+Do not read much into the worst op. With 3 seeds it is mostly not a rebuild: adaptive made no rebuilds in those runs and still reached 13 ms in one process on primary data and 51 ms in one on hostile data.
 
 ## Memory
 
@@ -137,6 +153,11 @@ Bytes per key at allocator capacity, after replay, including keys and payloads. 
 | Warm | 18.15 to 18.61 | 17.90 to 18.32 | 30.94 to 74.78 | 22.54 to 30.80 |
 
 Ranges span the four workloads. [results/update_memory/raw.jsonl](../results/update_memory/raw.jsonl) holds the split between directory, models, buffers and payloads. Peak values in [results/summary.md](../results/summary.md) include the input copies held during bulk load.
+
+Why adaptive went over the 5 percent limit:
+
+- **Primary `write_heavy`, 1.071:** buffers, at 4.08 bytes per key against 0.75, because adaptive kept them instead of merging. Directory and models add 0.36 against 0.27.
+- **Hostile, all workloads:** epsilon 8. After bulk load, before any write, adaptive already holds 19.64 bytes per key against 18.57.
 
 Build time on primary data was 0.32 s for this index, 0.41 s for the B+ tree and 6.17 s for ALEX.
 
@@ -152,9 +173,9 @@ Five seeds, 10,000,000 lookups per process, median load 9 for full data and 6 fo
 | `osm`, epsilon 256, 0.017 bytes per key | 559 ns | 312 ns | 259 ns | 0.564 [0.479, 0.646] | 1.179 [1.026, 1.328] |
 | `fb`, epsilon 256, 0.025 bytes per key | 647 ns | 346 ns | 243 ns | 0.588 [0.534, 0.642] | 1.450 [1.249, 1.685] |
 
-- **Against a sorted array:** 1.7x to 3.1x faster when the data is larger than cache.
+- **Against a sorted array:** 1.7x to 3.1x faster when the data is larger than cache. The 3.1x is the best epsilon of six on the friendliest of three datasets, chosen after the run. The plan set no hypothesis for static lookups, so this section is descriptive.
 - **Against PGM:** slower at every epsilon on full data, by 1.1x to 2.8x, and larger by about 2.5x. PGM's optimal segmentation and recursive routing are better, and this comparison does not close that gap.
-- **On warm data:** the sorted array is as fast, at 19 to 20 ns. This index ranged from 1.08x slower to 0.72x of its time on `fb` and `wiki_ts`. On `osm`, where a line fits worst, it was 1.2x to 1.4x slower, which is the case where a learned model does not pay. It beat PGM there, 0.65x of its time at epsilon 16.
+- **On warm data:** the sorted array takes 19 to 20 ns. This index took 0.72x to 1.20x of that on `fb` and `wiki_ts`. On `osm`, where a line fits worst, it took 1.2x to 1.4x, which is the case where a learned model does not pay. It beat PGM there, at 0.65x of its time at epsilon 16.
 
 **Routing correction.** I earlier dropped routing work because a profile put routing at 6 to 20 percent of lookup time. A later diagnostic on `fb` shows 29 percent at epsilon 8 and 11 percent at epsilon 64. So routing matters more at small epsilon, and it accounts for only part of the gap to PGM. I did not measure the rest. One extra cache miss on a model stored apart from its routing key is my leading guess.
 
@@ -166,13 +187,16 @@ Five seeds, 10,000,000 lookups per process, median load 9 for full data and 6 fo
 | Correctness suite | 9,874,517 operations checked against an ordered-map oracle | `make test` |
 | ASan and UBSan | Full suite clean | `make sanitize` |
 | Coverage | 98.26 percent of lines, 93.07 percent of branches | [coverage.json](../results/quality/coverage.json) |
-| Mutation testing | 44 of 44 scored mutants caught, 1 equivalent, from a hand-written list of 45. The first honest score was 40 of 44, and I added tests for the four survivors | [mutation.json](../results/quality/mutation.json) |
+| Mutation testing | 69 of 69 scored mutants caught, 3 equivalent, from a hand-written list of 72. It is only as strong as the list. See below | [mutation.json](../results/quality/mutation.json) |
+
+The mutation score took three passes. The first read 44 of 44 but was false, because a sandbox error counted as a kill for 4 mutants. The honest score was 40 of 44. After tests closed those gaps, an automated review wrote 27 more mutants and 17 survived, mostly in policy learning and work accounting. Those survivors now have tests. Answer correctness was strong from the start, and policy and metric code was the weak side.
 
 ## Limits of this evidence
 
-- **The rerun came after I saw results.** The first run used a load gate I had relaxed, at median load 149, and I read it before rerunning on a quiet machine. Binary, seeds and rules did not change. The primary verdict was negative both times: H1 0.881 [0.772, 1.037] and H2 0.919 [0.877, 0.960] under load. On hostile data, the shape held at 1.481 and 1.086. Both runs are kept.
+- **The rerun came after I saw results.** The first run used a load gate I had relaxed, at median load 149, and I read it before rerunning on a quiet machine. Binary, seeds and rules did not change. The primary verdict was negative both times: H1 0.881 [0.772, 1.037] and H2 0.919 [0.877, 0.960] under load. On hostile data, the shape held at 1.481 and 1.086. Warm H2 failed under load and passed when quiet. Both runs are kept, and every verdict for both is in [results/summary.md](../results/summary.md).
 - **Tuning was noisy.** The validation sweep ran at median load 153, so nearby configurations differ by less than the noise. The chosen settings may not be the best ones.
-- **Some runs passed the original gate.** `static_final`, `update_memory` and `update_work` ran with a relaxed gate, at median loads of 9 to 12 and peaks up to 21. Memory and work counts do not depend on timing for a fixed policy. Adaptive decisions use measured costs, so its counts can shift a little.
+- **Runs drift.** The same configuration and seeds in a later quiet run moved by up to 8.6 percent for fixed and 13.2 percent for adaptive. See the drift table in [results/summary.md](../results/summary.md). Intervals here are within one run, so they understate this. Do not compare ratios across runs, and do not over-read a ratio within about 10 percent of 1.
+- **Some runs exceeded the original gate.** `static_final`, `update_memory` and `update_work` ran with a relaxed gate, at median loads of 9 to 12. 11 `static_final` and 3 `update_work` records started at load 14 or above, peaking at 21, including one replicate behind the 3.1x. Memory and work counts do not depend on timing for a fixed policy. Adaptive decisions use measured costs, so its counts can shift a little.
 - **Latency and memory use 3 seeds, not 8.** I reduced them before the runs, to save time.
 - **Shifting hotspots here are synthetic.** The keys are real, but the workload timing is generated.
 - **One machine, one thread.** macOS has no public thread pinning, so runs request the highest quality-of-service class instead.
@@ -199,4 +223,4 @@ scripts/fetch_sosd.sh fb_200M_uint64
 scripts/run_full_benchmark.sh
 ```
 
-The last command takes about 2 hours on an idle M5 Pro and writes every table and chart. Delete a folder in `results/` to measure that run again.
+The last command takes about 2.5 hours on an idle M5 Pro and writes every table and chart. Delete a folder in `results/` to measure that run again.

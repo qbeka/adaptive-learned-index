@@ -233,6 +233,8 @@ def decide(records: list[dict], memory: list[dict], role: str, dataset: str, str
     seeds = sorted(set.intersection(*(set(adaptive[w]) & set(fixed[w]) for w in WORKLOADS)))
     per_seed = [geomean([adaptive[w][s]["ops_per_s"] / fixed[w][s]["ops_per_s"] for w in WORKLOADS]) for s in seeds]
     h2_mean = interval(per_seed)
+    # The plan says each workload's interval "reaches 0.95", so this tests the upper
+    # end of the interval. It is the lenient reading, and the report says so.
     floor_ok = all(result[2] >= 0.95 for result in per_workload.values())
 
     h3 = {}
@@ -277,36 +279,85 @@ def decision_lines(decision: dict) -> list[str]:
     memory = decision["memory"]
     lines.append(f"- Memory within 5 percent of fixed: {'yes' if memory['within_5_percent'] else 'no'}, "
                  + ", ".join(f"{w} {v:.3f}" for w, v in memory["ratio_final_bytes"].items()) + ".")
-    lines.append(f"- Claim {'holds' if decision['claim_holds'] else 'does not hold'} on this split.")
+    verdict = "holds" if decision["claim_holds"] else "does not hold"
+    if decision["split"] == "primary":
+        lines.append(f"- The claim {verdict}. The plan defines it on this split.")
+    else:
+        lines.append(f"- The rule {verdict} here, but this split is secondary and cannot decide the claim.")
     return lines + [""]
+
+
+def exploratory_comparison(run: str, left: str, right: str) -> tuple[dict, list[str]]:
+    """Paired throughput ratios of two labels in one run, by data and workload."""
+    records = load(RESULTS / run)
+    if check_checksums(records):
+        raise SystemExit(f"{run}: indexes disagree")
+    facts = {}
+    rows = []
+    for dataset, stride, role in VARIANTS:
+        subset = [r for r in records if r["dataset"] == dataset and r["stride"] == stride]
+        if not subset:
+            continue
+        per_workload = {}
+        for workload in WORKLOADS:
+            a = by_seed(subset, workload=workload, label=left)
+            b = by_seed(subset, workload=workload, label=right)
+            per_workload[workload] = paired(a, b, "ops_per_s")
+            result = interval(per_workload[workload])
+            facts[(role, workload)] = result
+            rows.append([role, workload, fmt_ratio(result),
+                         median(r["rebuilds"] - r["seals"] for r in a.values()),
+                         median(r["rebuilds"] - r["seals"] for r in b.values())])
+        count = len(per_workload[WORKLOADS[0]])
+        mean = interval([geomean([per_workload[w][i] for w in WORKLOADS]) for i in range(count)])
+        facts[(role, "geomean")] = mean
+        rows.append([role, "geometric mean", fmt_ratio(mean), "", ""])
+    lines = [f"### `{run}`: {left} over {right}", ""]
+    lines += table(["Data", "Workload", "Ratio", f"{left} rebuilds", f"{right} rebuilds"], rows)
+    return facts, lines
+
+
+def drift_lines(update: list[dict]) -> list[str]:
+    """Same configuration, same seeds, two quiet runs. Shows the noise between runs."""
+    same_epsilon = load(RESULTS / "update_same_epsilon")
+    never_merge = load(RESULTS / "update_never_merge")
+    rows = []
+    for dataset, stride, role in VARIANTS[:2]:
+        for workload in WORKLOADS:
+            fixed_later = by_seed(same_epsilon, dataset=dataset, stride=stride, workload=workload, label="fixed_e16")
+            fixed_first = by_seed(update, dataset=dataset, stride=stride, workload=workload, label="fixed")
+            adaptive_later = by_seed(never_merge, dataset=dataset, stride=stride, workload=workload, label="adaptive_e8")
+            adaptive_first = by_seed(update, dataset=dataset, stride=stride, workload=workload, label="adaptive")
+            rows.append([role, workload, fmt_ratio(interval(paired(fixed_later, fixed_first, "ops_per_s"))),
+                         fmt_ratio(interval(paired(adaptive_later, adaptive_first, "ops_per_s")))])
+    return ["### Drift between quiet runs", "",
+            "The same configuration and seeds, later run over `update_final`. Intervals within a run "
+            "do not include this.", ""] + table(["Data", "Workload", "Fixed", "Adaptive"], rows)
 
 
 def x_faster(ratio_of_time: float) -> str:
     return f"{1 / ratio_of_time:.1f}x"
 
 
-def headline(decisions: list[dict], static: dict, update: dict) -> dict:
+def headline(decisions: list[dict], static: dict, update: dict, never: dict, warm: dict) -> dict:
     """The figures on the site. Each one is read from a verdict or a table above."""
-    primary, hostile, _ = decisions
+    primary, hostile, warm_decision = decisions
     wiki = static[("wiki_ts_200M_uint64", "this index", 16)]
-    hotspot = hostile["h1"]["ratio"]
-    writes = hostile["h2"]["per_workload"]["write_heavy"]
-    moved = primary["h3"]["per_workload"]["write_heavy"]
-    write_ratio = primary["h2"]["per_workload"]["write_heavy"]
     alex = [update[("primary", w, "alex")][0] for w in WORKLOADS]
     alex_memory = [update[("memory", "primary", w, "alex")] / update[("memory", "primary", w, "adaptive")] for w in WORKLOADS]
-    hostile_memory = hostile["memory"]["ratio_final_bytes"].values()
     return {
+        "verdict": "The claim I tested failed. On the primary data, the policy did not beat the best fixed threshold.",
         "tiles": [
-            [x_faster(wiki["vs_binary"][0]), f"faster than binary search on Wikipedia timestamps, using {wiki['bytes_per_key']:.3f} index bytes per key"],
-            [f"{hotspot[0]:.2f}x", "throughput over a fixed threshold on data neither was tuned on"],
-            [f"{moved['fixed_bytes'] / 1e9:.0f} GB", f"of rebuild copying removed, with write throughput {100 * (write_ratio[0] - 1):.0f}% higher"],
+            [f"{warm[('warm', 'geomean')][0]:.2f}x", "throughput over a near-never-merge threshold on small data, where rebuilds pay"],
+            [x_faster(wiki["vs_binary"][0]), f"faster than binary search at best, using {wiki['bytes_per_key']:.3f} index bytes per key"],
         ],
         "rows": [
-            ["The verdict", "The claim I fixed in advance does not hold. On the primary data, the policy did not beat the best fixed threshold across all four workloads."],
-            ["Where it wins", f"On OpenStreetMap keys, which it was not tuned on, it beat the same fixed threshold by {hotspot[0]:.2f}x on a moving hotspot and {writes[0]:.2f}x on writes, at {100 * (min(hostile_memory) - 1):.0f} to {100 * (max(hostile_memory) - 1):.0f} percent more memory. That memory is over the limit I set, so the win does not count as the claim."],
-            ["What it saves", f"Under heavy writes on Wikipedia timestamps it moved {moved['adaptive_bytes'] / 1e9:.0f} GB where the fixed threshold moved {moved['fixed_bytes'] / 1e9:.0f} GB, and throughput rose by {100 * (write_ratio[0] - 1):.0f}%."],
-            ["Against ALEX", f"ALEX was faster everywhere, by {1 / max(alex):.1f}x to {1 / min(alex):.1f}x on the primary data, for {100 * (min(alex_memory) - 1):.0f} to {100 * (max(alex_memory) - 1):.0f} percent more memory. This index does not beat it on speed."],
+            ["The verdict", f"I fixed the hypotheses and the rule before reading test data. On Wikipedia timestamps the policy over the best fixed threshold came to {primary['h2']['geomean_ratio'][0]:.3f} [{primary['h2']['geomean_ratio'][1]:.3f}, {primary['h2']['geomean_ratio'][2]:.3f}], so the claim fails."],
+            ["On full-size data", f"Rebuilds barely paid. The policy made almost none, and a threshold that almost never merges did as well: {never[('primary', 'geomean')][0]:.3f} on Wikipedia timestamps and {never[('hostile', 'geomean')][0]:.3f} on OpenStreetMap keys."],
+            ["On small data", f"Rebuilds paid, and the policy found them. It beat the near-never-merge threshold by {warm[('warm', 'geomean')][0]:.2f}x and the tuned threshold by {warm_decision['h2']['geomean_ratio'][0]:.2f}x. The first figure is exploratory."],
+            ["No retuning", f"A threshold tuned on one dataset lost by up to {hostile['h1']['ratio'][0]:.2f}x on another. The policy needed no retuning, though it used {100 * (min(hostile['memory']['ratio_final_bytes'].values()) - 1):.0f} to {100 * (max(hostile['memory']['ratio_final_bytes'].values()) - 1):.0f} percent more memory on that data, which is over my limit."],
+            ["Against ALEX", f"ALEX was faster, by {1 / max(alex):.1f}x to {1 / min(alex):.1f}x on the primary data, for {100 * (min(alex_memory) - 1):.0f} to {100 * (max(alex_memory) - 1):.0f} percent more memory. This index does not beat it on speed."],
+            ["Against PGM", "PGM was faster on full data and about 2.5x smaller. This index beat a sorted array when data was larger than cache, but not reliably when data fit in cache."],
         ],
     }
 
@@ -337,9 +388,15 @@ def main() -> int:
     warm_lines, warm_facts = static_section("static_warm", "Static lookups, warm cache")
     update_lines, update_facts = update_section(update, latency, memory)
     lines += static_lines + warm_lines + update_lines + build_section(update) + work_section(work)
+    lines += ["## Exploratory runs", "",
+              "Designed after the verdict, so they decide nothing. They use test seeds.", ""]
+    _, same_lines = exploratory_comparison("update_same_epsilon", "adaptive_e16", "fixed_e16")
+    never_facts, never_lines = exploratory_comparison("update_never_merge", "adaptive_e8", "fixed_e8_t4095")
+    warm_never, warm_never_lines = exploratory_comparison("update_never_merge_warm", "adaptive_e8", "fixed_e8_t4095")
+    lines += same_lines + never_lines + warm_never_lines + drift_lines(update)
     (RESULTS / "summary.md").write_text("\n".join(lines) + "\n")
     (RESULTS / "decisions.json").write_text(json.dumps(decisions, indent=2) + "\n")
-    (RESULTS / "headline.json").write_text(json.dumps(headline(decisions, static_facts, update_facts), indent=2) + "\n")
+    (RESULTS / "headline.json").write_text(json.dumps(headline(decisions, static_facts, update_facts, never_facts, warm_never), indent=2) + "\n")
     print(f"wrote results/summary.md and results/decisions.json, 0 checksum mismatches across "
           f"{len(update) + len(latency) + len(memory) + len(work)} update processes")
     for decision in decisions:

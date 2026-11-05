@@ -167,3 +167,11 @@ no tuning happens between the runs.
   `results/update_latency_loaded`, and the report shows both sets of ratios.
 - `static_final`, `static_warm`, `update_memory` and `update_work` keep their
   recorded runs, which already ran below or near the gate. Their load is reported.
+
+## Amendment, 5 November 2026: exploratory runs
+
+These runs came after the verdict, and they decide nothing. They use test seeds.
+
+- `update_same_epsilon` separates policy from epsilon.
+- `update_never_merge` and `update_never_merge_warm` compare adaptive with threshold
+  4095, because review showed that adaptive made almost no rebuilds on full-size data.

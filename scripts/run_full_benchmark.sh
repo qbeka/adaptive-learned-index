@@ -26,6 +26,8 @@ run update_work --jobs 4
 run static_final
 run static_warm
 run update_same_epsilon
+run update_never_merge
+run update_never_merge_warm
 
 python3 scripts/summarize.py
 python3 scripts/plot.py tradeoff results/static_final results/plots/static_tradeoff.svg

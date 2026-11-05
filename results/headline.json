@@ -1,34 +1,39 @@
 {
+  "verdict": "The claim I tested failed. On the primary data, the policy did not beat the best fixed threshold.",
   "tiles": [
     [
+      "1.30x",
+      "throughput over a near-never-merge threshold on small data, where rebuilds pay"
+    ],
+    [
       "3.1x",
-      "faster than binary search on Wikipedia timestamps, using 0.021 index bytes per key"
-    ],
-    [
-      "1.54x",
-      "throughput over a fixed threshold on data neither was tuned on"
-    ],
-    [
-      "58 GB",
-      "of rebuild copying removed, with write throughput 8% higher"
+      "faster than binary search at best, using 0.021 index bytes per key"
     ]
   ],
   "rows": [
     [
       "The verdict",
-      "The claim I fixed in advance does not hold. On the primary data, the policy did not beat the best fixed threshold across all four workloads."
+      "I fixed the hypotheses and the rule before reading test data. On Wikipedia timestamps the policy over the best fixed threshold came to 0.948 [0.907, 0.994], so the claim fails."
     ],
     [
-      "Where it wins",
-      "On OpenStreetMap keys, which it was not tuned on, it beat the same fixed threshold by 1.54x on a moving hotspot and 1.50x on writes, at 6 to 7 percent more memory. That memory is over the limit I set, so the win does not count as the claim."
+      "On full-size data",
+      "Rebuilds barely paid. The policy made almost none, and a threshold that almost never merges did as well: 0.981 on Wikipedia timestamps and 0.956 on OpenStreetMap keys."
     ],
     [
-      "What it saves",
-      "Under heavy writes on Wikipedia timestamps it moved 0 GB where the fixed threshold moved 58 GB, and throughput rose by 8%."
+      "On small data",
+      "Rebuilds paid, and the policy found them. It beat the near-never-merge threshold by 1.30x and the tuned threshold by 1.09x. The first figure is exploratory."
+    ],
+    [
+      "No retuning",
+      "A threshold tuned on one dataset lost by up to 1.54x on another. The policy needed no retuning, though it used 6 to 7 percent more memory on that data, which is over my limit."
     ],
     [
       "Against ALEX",
-      "ALEX was faster everywhere, by 1.2x to 3.4x on the primary data, for 30 to 48 percent more memory. This index does not beat it on speed."
+      "ALEX was faster, by 1.2x to 3.4x on the primary data, for 30 to 48 percent more memory. This index does not beat it on speed."
+    ],
+    [
+      "Against PGM",
+      "PGM was faster on full data and about 2.5x smaller. This index beat a sorted array when data was larger than cache, but not reliably when data fit in cache."
     ]
   ]
 }
