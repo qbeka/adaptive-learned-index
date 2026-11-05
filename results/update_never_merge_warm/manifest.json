@@ -1,0 +1,41 @@
+{
+  "experiment": "update_never_merge_warm",
+  "spec": "experiments/update_never_merge_warm.json",
+  "spec_sha1": "674edfef6ce1fc74eeca36f52f944f00d0023ffa",
+  "commit": "564b903add890e5ca8df41d4e1e1af06c40a5ee2",
+  "dirty": false,
+  "started_utc": "2026-11-05T10:23:29Z",
+  "command": "scripts/run_experiment.py experiments/update_never_merge_warm.json",
+  "compiler_flags": "-std=c++20 -O3 -DNDEBUG -mcpu=native",
+  "baselines": "# name  url  commit\nPGM-index https://github.com/gvinciguerra/PGM-index c6fcf3d34e55eb0061b01e2f49dfcbdb711f1407\nALEX https://github.com/microsoft/ALEX 4370da6aa8b509fdc9b0d2c49faa0624b0078589\ntlx https://github.com/tlx/tlx 2dd63ab839909f0b43cd02108a1869c4670b2c8e\nSOSD https://github.com/learnedsystems/SOSD f52f4cba01dfcd37f1574551fccef00198863b88",
+  "input_md5": {
+    "data/sosd/wiki_ts_200M_uint64": "4f1402b1c476d67f77d2da4955432f7d"
+  },
+  "seeds": [
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108
+  ],
+  "max_load": 14,
+  "binary_sha256": "c8581206671e63a003e94c11ee440cfadccbb7e3700c3b972369ae0e237c5b78",
+  "hardware": {
+    "cpu": "Apple M5 Pro",
+    "logical_cpus": "18",
+    "perf_core_count": "6",
+    "memory_bytes": "51539607552",
+    "l1d_bytes": "131072",
+    "l2_bytes": "16777216",
+    "cache_line_bytes": "128",
+    "os": "macOS-26.6.2-arm64-arm-64bit",
+    "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)"
+  },
+  "timing": "steady_clock, 24 MHz tick on Apple silicon (41.7 ns resolution)",
+  "thread_placement": "QOS_CLASS_USER_INTERACTIVE; macOS has no public affinity API",
+  "finished_utc": "2026-11-05T10:24:36Z",
+  "records": 64
+}

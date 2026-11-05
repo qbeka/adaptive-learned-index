@@ -95,7 +95,7 @@ MUTANTS = [
     ('reads never checked', POLICY, 'return (state.reads & 15U) == 0 && worth_rebuilding(state, leaf);', 'return false;', None),
     ('merge cost never learned', POLICY, '    if (config_.measure_costs && merged_keys > 0) {\n      blend(ns_per_merged_key_, static_cast<double>(ns) / static_cast<double>(merged_keys));\n    }\n', '', None),
     ('read cost never learned', POLICY, '    if (steps > 0) {\n      blend(ns_per_step_, static_cast<double>(ns) / static_cast<double>(steps));\n    }\n', '', None),
-    ('rebuild does not clear counters', DYNAMIC, '    for (std::size_t i = 0; i <= extra; ++i) policy_.reset(leaves_[index + i]->state);\n', '', None),
+    ('rebuild does not clear counters', DYNAMIC, '    for (std::size_t i = 0; i <= extra; ++i) policy_.reset(leaves_[index + i]->state);\n', '', 'A rebuild creates new leaves, and new counters already start at zero, so this reset only records the epoch.'),
     ('seal does not clear counters', DYNAMIC, '    policy_.reset(leaf.state);\n', '', None),
     ('scan pays no delta read', DYNAMIC, '      if (!leaf.delta.empty()) policy_.on_delta_read(leaf.state);\n', '', None),
     ('lower_bound earns no read', DYNAMIC, '      policy_.on_delta_read(leaves_[index]->state);\n      maybe_rebuild_after_read(index);\n', '', None),
