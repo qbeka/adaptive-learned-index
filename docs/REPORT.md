@@ -1,6 +1,6 @@
 # Benchmark report
 
-Measured on 5 November 2026 on an Apple M5 Pro with 48 GiB of RAM. Every benchmark number here comes from a run listed in [results/ARTIFACTS.md](../results/ARTIFACTS.md). The routing percentages are diagnostics, recorded only in this report and in [RESEARCH.md](RESEARCH.md). All tables are in [results/summary.md](../results/summary.md), generated from raw data by `scripts/summarize.py`.
+Measured on an Apple M5 Pro with 48 GiB of RAM. Every benchmark number here comes from a run listed in [results/ARTIFACTS.md](../results/ARTIFACTS.md). The routing percentages are diagnostics, recorded only in this report and in [RESEARCH.md](RESEARCH.md). All tables are in [results/summary.md](../results/summary.md), generated from raw data by `scripts/summarize.py`.
 
 ## Result
 

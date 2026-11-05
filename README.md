@@ -24,7 +24,7 @@ The research question: **when does a local rebuild pay for itself?**
 
 So the short answer: on full-size data over 20M operations, rebuilds barely pay and the policy correctly does almost nothing. On small data they pay, and it finds them. It does this without retuning, but it does not beat the best fixed setting for each case by a margin that survives noise on the primary data.
 
-Brackets are 95 percent paired bootstrap intervals over 8 seeds. Machine: Apple M5 Pro, measured 5 November 2026.
+Brackets are 95 percent paired bootstrap intervals over 8 seeds. Machine: Apple M5 Pro.
 
 ## Quickstart
 
