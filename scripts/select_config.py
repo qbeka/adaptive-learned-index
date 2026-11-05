@@ -23,7 +23,15 @@ VARIANTS = [
     {"dataset": "data/sosd/wiki_ts_200M_uint64", "stride": 2048},
 ]
 WORKLOADS = ["read_heavy", "write_heavy", "append_only", "shifting_hotspot"]
-MODES = ["throughput", "latency", "memory"]
+# Name, binary, mode, seeds and indexes of each frozen run. Percentiles and memory
+# are stable across seeds, so those runs use three. Work counters need a separate
+# instrumented binary and only exist for the two learned policies.
+RUNS = [
+    ("update_final", "update_bench", "throughput", SEEDS, None),
+    ("update_latency", "update_bench", "latency", SEEDS[:3], None),
+    ("update_memory", "update_bench", "memory", SEEDS[:3], None),
+    ("update_work", "update_bench_instrumented", "throughput", SEEDS[:3], ("fixed", "adaptive")),
+]
 
 
 def rank(records: list[dict]) -> dict[str, float]:
@@ -64,19 +72,20 @@ def main() -> int:
     # The final labels name the role, and the arguments keep the chosen settings.
     indexes = [{"label": family, "args": args_of[label]} for family, label in chosen.items()]
     indexes.append({"label": "alex", "args": args_of["alex"]})
-    spec = {
-        "name": "update_final",
-        "binary": "update_bench",
-        "max_load": validation["max_load"],
-        "seeds": SEEDS,
-        "selected_from": chosen,
-        "variants": VARIANTS,
-        "matrix": {"ops": validation["matrix"]["ops"], "workload": WORKLOADS, "mode": MODES},
-        "indexes": indexes,
-    }
-    path = ROOT / "experiments/update_final.json"
-    path.write_text(json.dumps(spec, indent=2) + "\n")
-    print(f"wrote {path.relative_to(ROOT)}")
+    for name, binary, mode, seeds, labels in RUNS:
+        spec = {
+            "name": name,
+            "binary": binary,
+            "max_load": validation["max_load"],
+            "seeds": seeds,
+            "selected_from": chosen,
+            "variants": VARIANTS,
+            "matrix": {"ops": validation["matrix"]["ops"], "workload": WORKLOADS, "mode": [mode]},
+            "indexes": [index for index in indexes if labels is None or index["label"] in labels],
+        }
+        path = ROOT / f"experiments/{name}.json"
+        path.write_text(json.dumps(spec, indent=2) + "\n")
+        print(f"wrote {path.relative_to(ROOT)}")
     return 0
 
 

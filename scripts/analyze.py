@@ -34,8 +34,8 @@ def check_checksums(records: list[dict]) -> int:
     seen = {}
     mismatches = 0
     for record in records:
-        key = (record["dataset"], record.get("stride"), record["workload"],
-               record["seed"], record["trace_digest"])
+        key = (record["dataset"], record.get("stride"), record.get("workload"),
+               record["seed"], record.get("trace_digest"))
         if seen.setdefault(key, record["checksum"]) != record["checksum"]:
             mismatches += 1
             print(f"CHECKSUM MISMATCH {key} {record['label']}", file=sys.stderr)
