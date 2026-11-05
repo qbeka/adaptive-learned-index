@@ -148,3 +148,22 @@ learned policies only). The hypotheses, decision rule and memory limit do not
 change. All four use 20M operations and the three data variants above.
 
 The memory and work runs use four parallel jobs, because neither reports timing.
+
+## Amendment, 5 November 2026: quiet rerun
+
+The other jobs on the machine finished during the final runs. `update_final` ran at a
+median load of 149 and `update_latency` at a median of 9 with a peak of 65. After them,
+the load average fell to about 5, inside the original gate of 14.
+
+The loaded results had been read when this was decided, so this is stated plainly.
+On the primary split they did not support H1 or H2. The rerun is not a search for a
+better outcome. Binary, specs, seeds, hypotheses and decision rule are unchanged, and
+no tuning happens between the runs.
+
+- `update_final` and `update_latency` run again under the original gate.
+- The verdict in the report comes from the rerun, because the gate of 14 is what the
+  plan set before any data existed. It stands whichever way it goes.
+- The loaded runs stay in `results/update_final_loaded` and
+  `results/update_latency_loaded`, and the report shows both sets of ratios.
+- `static_final`, `static_warm`, `update_memory` and `update_work` keep their
+  recorded runs, which already ran below or near the gate. Their load is reported.

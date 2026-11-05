@@ -71,12 +71,15 @@ def load_stats(records: list[dict]) -> str:
 
 def static_section(name: str, title: str) -> tuple[list[str], dict]:
     records = load(RESULTS / name)
+    # Static records carry no seed of their own, so the replicate identifies it.
+    for record in records:
+        record["seed"] = record["replicate"]
     if not all(r["checksum_ok"] for r in records):
         raise SystemExit(f"{name}: a lookup checksum failed")
     if check_checksums(records):
         raise SystemExit(f"{name}: indexes disagree")
     lines = [f"## {title}", "",
-             f"{len(records)} processes, seeds {sorted({r['seed'] for r in records})}, "
+             f"{len(records)} processes, {len({r['seed'] for r in records})} seeds, "
              f"load before each process: {load_stats(records)}.", ""]
     facts = {}
     for dataset in sorted({r["dataset"] for r in records}):
@@ -291,6 +294,15 @@ def main() -> int:
     decisions = [decide(update, memory, role, dataset, stride) for dataset, stride, role in VARIANTS]
     for decision in decisions:
         lines += decision_lines(decision)
+    # The first run, on a loaded machine, stays visible beside the verdict.
+    loaded_dir = RESULTS / "update_final_loaded"
+    if loaded_dir.exists():
+        loaded = load(loaded_dir)
+        lines += ["# First run on a loaded machine", "",
+                  f"Same binary, specs and seeds. Load before each process: {load_stats(loaded)}. "
+                  "These are not the verdicts.", ""]
+        for dataset, stride, role in VARIANTS:
+            lines += decision_lines(decide(loaded, memory, role, dataset, stride))
     static_lines, static_facts = static_section("static_final", "Static lookups, larger than cache")
     warm_lines, warm_facts = static_section("static_warm", "Static lookups, warm cache")
     update_lines, update_facts = update_section(update, latency, memory)

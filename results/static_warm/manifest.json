@@ -1,0 +1,39 @@
+{
+  "experiment": "static_warm",
+  "spec": "experiments/static_warm.json",
+  "spec_sha1": "0c93bbac1645ca426f2d9c9161f16c63b8c93d28",
+  "commit": "f79e03f5414910171aaa97a4e1496de8d90620ea",
+  "dirty": false,
+  "started_utc": "2026-11-05T08:28:26Z",
+  "command": "scripts/run_experiment.py experiments/static_warm.json --max-load 1000",
+  "compiler_flags": "-std=c++20 -O3 -DNDEBUG -mcpu=native",
+  "baselines": "# name  url  commit\nPGM-index https://github.com/gvinciguerra/PGM-index c6fcf3d34e55eb0061b01e2f49dfcbdb711f1407\nALEX https://github.com/microsoft/ALEX 4370da6aa8b509fdc9b0d2c49faa0624b0078589\ntlx https://github.com/tlx/tlx 2dd63ab839909f0b43cd02108a1869c4670b2c8e\nSOSD https://github.com/learnedsystems/SOSD f52f4cba01dfcd37f1574551fccef00198863b88",
+  "input_md5": {
+    "data/sosd/fb_200M_uint64": "3b0f820caa0d62150e87ce94ec989978",
+    "data/sosd/osm_cellids_200M_uint64": "a7f6b8d2df09fcda5d9cfbc87d765979",
+    "data/sosd/wiki_ts_200M_uint64": "4f1402b1c476d67f77d2da4955432f7d"
+  },
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ],
+  "max_load": 1000.0,
+  "hardware": {
+    "cpu": "Apple M5 Pro",
+    "logical_cpus": "18",
+    "perf_core_count": "6",
+    "memory_bytes": "51539607552",
+    "l1d_bytes": "131072",
+    "l2_bytes": "16777216",
+    "cache_line_bytes": "128",
+    "os": "macOS-26.6.2-arm64-arm-64bit",
+    "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)"
+  },
+  "timing": "steady_clock, 24 MHz tick on Apple silicon (41.7 ns resolution)",
+  "thread_placement": "QOS_CLASS_USER_INTERACTIVE; macOS has no public affinity API",
+  "finished_utc": "2026-11-05T08:31:58Z",
+  "records": 195
+}
