@@ -274,6 +274,32 @@ void check_extreme_half_life_is_safe() {
   AdaptivePolicy::LeafState state;
   policy.on_delta_read(state);
   CHECK(state.reads == 1);
+  // A half-life this long means never decaying. An unclamped shift wraps on
+  // arm64, which would halve these counters many times over.
+  for (int i = 0; i < 1 << 12; ++i) policy.on_delta_read(state);
+  CHECK(state.reads == (1 << 12) + 1);
+}
+
+// The two gates before the cost comparison. Each case below has savings far above
+// the merge cost, so only the gate can refuse it.
+void check_minimums_gate_every_decision() {
+  AdaptiveConfig adaptive = frozen_costs();
+  adaptive.min_samples = 1000;
+  adaptive.min_delta_keys = 8;
+  AdaptivePolicy policy(adaptive);
+  const LeafView small_buffer{10, 7};
+  const LeafView enough_buffer{10, 8};
+
+  AdaptivePolicy::LeafState few_samples;
+  few_samples.reads = 999;
+  CHECK(policy.expected_saving_ns(few_samples, enough_buffer) > 10 * policy.merge_cost_ns(enough_buffer));
+  CHECK(!policy.should_rebuild_after_write(few_samples, enough_buffer));
+
+  AdaptivePolicy::LeafState enough_samples;
+  enough_samples.reads = 1000;
+  CHECK(policy.expected_saving_ns(enough_samples, small_buffer) > 10 * policy.merge_cost_ns(small_buffer));
+  CHECK(!policy.should_rebuild_after_write(enough_samples, small_buffer));
+  CHECK(policy.should_rebuild_after_write(enough_samples, enough_buffer));
 }
 
 // A compiler once deleted the calibration loop and this measured zero, which
@@ -430,6 +456,7 @@ int main() {
   check_rejected_load_keeps_contents();
   check_counters_decay_while_a_leaf_is_idle();
   check_extreme_half_life_is_safe();
+  check_minimums_gate_every_decision();
   check_shift_cost_calibration_measures_something();
   check_seal_keeps_appended_keys_and_skips_the_merge();
   check_adaptive_does_not_thrash_on_repeated_bursts();

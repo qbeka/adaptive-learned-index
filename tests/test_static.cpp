@@ -86,6 +86,17 @@ void check_slope_rounding_stays_within_one_position() {
   CHECK(index.max_window() <= 2);
 }
 
+// Any slope inside the cone is correct, so only the window size shows where in the
+// cone it sits. Evenly spaced keys have a true slope in the middle, which leaves
+// almost no error. A slope at either edge would use the whole of epsilon.
+void check_slope_sits_in_the_middle_of_the_cone() {
+  std::vector<Key> keys;
+  for (Key i = 0; i < 100; ++i) keys.push_back(i * 1000);
+  SegmentModel model;
+  CHECK(fit_prefix(keys.data(), keys.size(), 32, keys.size(), model) == keys.size());
+  CHECK(model.over + model.under <= 2);
+}
+
 void check_observed_error_respects_epsilon() {
   for (KeySpace space : kAllKeySpaces) {
     for (std::uint64_t epsilon : kEpsilons) {
@@ -224,6 +235,7 @@ int main() {
   check_adjacent_keys_near_the_maximum();
   check_large_offsets_with_tiny_differences();
   check_slope_rounding_stays_within_one_position();
+  check_slope_sits_in_the_middle_of_the_cone();
   check_observed_error_respects_epsilon();
   check_segment_cap_is_respected();
   check_widen_finds_every_position();

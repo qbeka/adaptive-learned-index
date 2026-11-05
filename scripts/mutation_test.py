@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Measures whether the tests can fail: applies one deliberate bug at a time.
 
-Usage: scripts/mutation_test.py [--out results/quality/mutation.json]
+Usage: scripts/mutation_test.py [--out results/quality/mutation.json] [--jobs N]
 
 Each mutant is one small source edit in a temporary copy. A mutant is killed if
 the correctness suite fails on it, or hangs past the timeout. A survivor means a
@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -92,33 +93,51 @@ def run_suite(work: Path) -> tuple[str, str]:
     return "survived", ""
 
 
+def run_in_sandbox(relative: str | None, original: str | None, replacement: str | None) -> tuple[str, str]:
+    """Runs the suite in a temporary copy, with one edit applied if one is given."""
+    with tempfile.TemporaryDirectory() as temp:
+        work = Path(temp)
+        shutil.copytree(ROOT / "include", work / "include")
+        shutil.copytree(ROOT / "tests", work / "tests")
+        (work / "build").mkdir()
+        if relative is not None:
+            target = work / relative
+            target.write_text(target.read_text().replace(original, replacement))
+        return run_suite(work)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", type=Path, default=ROOT / "results" / "quality" / "mutation.json")
+    parser.add_argument("--jobs", type=int, default=6)
     args = parser.parse_args()
 
-    rows = []
     for name, relative, original, replacement, equivalent in MUTANTS:
         source = (ROOT / relative).read_text()
         if source.count(original) != 1:
             print(f"STALE MUTANT: {name}: text found {source.count(original)} times", file=sys.stderr)
             return 2
 
-    for position, (name, relative, original, replacement, equivalent) in enumerate(MUTANTS, 1):
+    # The unmodified code must pass here first. Otherwise a failure of the sandbox
+    # itself would be counted as a killed mutant, which is what happened in an
+    # earlier version of this script when the sandbox had no build/ directory.
+    baseline, detail = run_in_sandbox(None, None, None)
+    if baseline != "survived":
+        print(f"the unmodified suite fails in the sandbox: {detail}", file=sys.stderr)
+        return 2
+
+    def run_mutant(mutant: tuple) -> dict:
+        name, relative, original, replacement, equivalent = mutant
         if equivalent:
-            rows.append({"name": name, "file": relative, "outcome": "equivalent", "detail": equivalent})
-            continue
-        with tempfile.TemporaryDirectory() as temp:
-            work = Path(temp)
-            shutil.copytree(ROOT / "include", work / "include")
-            shutil.copytree(ROOT / "tests", work / "tests")
-            target = work / relative
-            target.write_text(target.read_text().replace(original, replacement))
-            started = time.time()
-            outcome, detail = run_suite(work)
-        rows.append({"name": name, "file": relative, "outcome": outcome, "detail": detail,
-                     "seconds": round(time.time() - started, 1)})
-        print(f"{position}/{len(MUTANTS)} {outcome:9} {name}", flush=True)
+            return {"name": name, "file": relative, "outcome": "equivalent", "detail": equivalent}
+        started = time.time()
+        outcome, detail = run_in_sandbox(relative, original, replacement)
+        print(f"{outcome:9} {name}", flush=True)
+        return {"name": name, "file": relative, "outcome": outcome, "detail": detail,
+                "seconds": round(time.time() - started, 1)}
+
+    with ThreadPoolExecutor(args.jobs) as pool:
+        rows = list(pool.map(run_mutant, MUTANTS))
 
     killed = sum(r["outcome"] == "killed" for r in rows)
     survived = [r["name"] for r in rows if r["outcome"] == "survived"]
