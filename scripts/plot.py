@@ -57,6 +57,9 @@ def nice_ticks(low: float, high: float, count: int = 5) -> list[float]:
     while value <= high + step / 1000:
         ticks.append(round(value, 10))
         value += step
+    # The top tick must clear the data, or the highest line leaves the plot.
+    if ticks[-1] < high:
+        ticks.append(round(ticks[-1] + step, 10))
     return ticks
 
 
