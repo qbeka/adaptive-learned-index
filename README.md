@@ -2,6 +2,8 @@
 
 *An in-memory ordered index that predicts where a key is, then measures when a rebuild pays for itself.*
 
+[Live replay](https://www.qendrimbeka.com/projects/adaptive-learned-index/index.html) | [Report](docs/REPORT.md) | [Interview walkthrough](docs/INTERVIEW.md)
+
 A C++20 library for exact ordered lookups over unsigned 64-bit keys. A small linear model predicts a key's position, and a bounded search corrects the prediction. Writes go to a small buffer beside each segment. A policy decides when merging that buffer is worth the cost, using the reads, writes and costs it observes on the machine it runs on.
 
 The research question: **when does a local rebuild pay for itself?**
@@ -45,7 +47,7 @@ It runs the correctness suite, replays a trace against the oracle, and compares 
 | Run a benchmark experiment | `scripts/run_experiment.py experiments/NAME.json` |
 | Summarise a run | `scripts/analyze.py results/NAME --reference LABEL` |
 | Rerun all final benchmarks | `scripts/run_full_benchmark.sh` |
-| Open the demo | Open `site/index.html` in a browser. It works offline. |
+| Open the demo | Open `site/index.html` in a browser, or see the [live replay](https://www.qendrimbeka.com/projects/adaptive-learned-index/index.html). |
 
 Experiments resume if interrupted, and they wait for the machine to go quiet before each measurement. [results/ARTIFACTS.md](results/ARTIFACTS.md) lists every recorded run.
 
