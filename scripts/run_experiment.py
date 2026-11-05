@@ -63,16 +63,17 @@ def hardware() -> dict:
 
 
 def expand_cells(spec: dict) -> list[dict]:
-    """Returns every combination of the spec's matrix and indexes."""
+    """Returns every combination of the spec's variants, matrix and indexes."""
     matrix = spec.get("matrix", {})
     names = list(matrix)
     cells = []
-    for values in itertools.product(*(matrix[name] for name in names)):
-        for index in spec["indexes"]:
-            cell = dict(zip(names, values))
-            cell["label"] = index["label"]
-            cell["args"] = index["args"]
-            cells.append(cell)
+    for variant in spec.get("variants", [{}]):
+        for values in itertools.product(*(matrix[name] for name in names)):
+            for index in spec["indexes"]:
+                cell = {**variant, **dict(zip(names, values))}
+                cell["label"] = index["label"]
+                cell["args"] = index["args"]
+                cells.append(cell)
     return cells
 
 
@@ -129,7 +130,8 @@ def write_manifest(run_dir: Path, spec: dict, spec_path: Path, max_load: float) 
             path.write_text(json.dumps(manifest, indent=2) + "\n")
         return
     inputs = {}
-    for dataset in spec.get("matrix", {}).get("dataset", []):
+    datasets = spec.get("matrix", {}).get("dataset", []) + [v["dataset"] for v in spec.get("variants", [])]
+    for dataset in sorted(set(datasets)):
         inputs[dataset] = md5_file(ROOT / dataset)
     manifest = {
         "experiment": spec["name"],
