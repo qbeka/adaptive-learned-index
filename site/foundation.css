@@ -1,0 +1,191 @@
+/* Shared by the project pages. Each page adds its own stage on top of this. */
+
+@font-face {
+  font-family: 'Geist Serif';
+  src: url('fonts/GeistSerif-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist';
+  src: url('fonts/Geist-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist';
+  src: url('fonts/Geist-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+  --paper: #ffffff;
+  --surface: #fbfaf7;
+  --ink: #111511;
+  --body: #444944;
+  --muted: #535753;
+  --faint: #8d918e;
+  --forest: #1d3a2a;
+  --forest-hover: #2b4f3b;
+  --forest-pressed: #142a1e;
+  --line: #11151117;
+  --line-strong: #1115112e;
+  --wash: #1115110a;
+  --wash-strong: #11151117;
+  --serif: 'Geist Serif', 'Times New Roman', Times, serif;
+  --sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --stage-width: 1080px;
+  --reading-width: 680px;
+  --gutter: 24px;
+  --radius-outer: 12px;
+  --radius-control: 7px;
+  --control-height: 36px;
+  --float-shadow: 0 1px 2px #11151112, 0 6px 16px #1115110d;
+}
+@media (max-width: 767px) {
+  :root { --gutter: 16px; }
+}
+@media (pointer: coarse) {
+  :root { --control-height: 44px; }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--paper); -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 15px/24px var(--sans);
+  font-synthesis: none;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: #1d3a2a26; }
+[hidden] { display: none !important; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+/* Page frame */
+.shell { width: 100%; max-width: calc(var(--stage-width) + var(--gutter) * 2); margin: 0 auto; padding: 0 var(--gutter); }
+.topbar { display: flex; align-items: center; justify-content: space-between; height: 52px; }
+.topbar nav { display: flex; align-items: center; gap: 4px; margin-right: -8px; }
+.title { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; column-gap: 16px; margin-bottom: 16px; }
+.title h1 { margin: 0; font: 400 40px/44px var(--serif); letter-spacing: -0.03em; }
+.title p { grid-column: 1 / -1; margin: 2px 0 0; font: 400 17px/24px var(--serif); color: var(--body); letter-spacing: -0.008em; }
+
+/* Links */
+.quiet {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 8px;
+  border-radius: var(--radius-control); color: var(--muted); font-size: 14px; line-height: 20px;
+  text-decoration: none; transition: color .12s;
+}
+.quiet:active { color: var(--ink); }
+.back { margin-left: -8px; }
+.back svg { flex: none; }
+.prose a { color: inherit; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+.prose a:active { text-decoration-color: currentColor; }
+@media (hover: hover) {
+  .quiet:hover { color: var(--ink); }
+  .prose a:hover { text-decoration-color: currentColor; }
+}
+
+/* One focus ring for everything */
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
+
+/* Controls. Every state is written out, so that no two can combine by accident. */
+.control {
+  appearance: none; display: inline-flex; align-items: center; justify-content: center;
+  min-height: var(--control-height); padding: 0 11px; margin: 0;
+  border: 1px solid transparent; border-radius: var(--radius-control);
+  background: transparent; color: var(--ink);
+  font: 400 13px/16px var(--sans); letter-spacing: -0.003em; white-space: nowrap; text-decoration: none;
+  cursor: pointer; user-select: none; -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  transition: background-color .12s, color .12s, border-color .12s;
+}
+.control:active { background: var(--wash-strong); }
+@media (hover: hover) {
+  .control:hover { background: var(--wash); }
+  .control:active { background: var(--wash-strong); }
+}
+
+.control[aria-pressed='true'] { background: var(--forest); color: #fff; font-weight: 500; }
+.control[aria-pressed='true']:active { background: var(--forest-pressed); }
+@media (hover: hover) {
+  .control[aria-pressed='true']:hover { background: var(--forest-hover); color: #fff; }
+  .control[aria-pressed='true']:active { background: var(--forest-pressed); color: #fff; }
+}
+
+.control.outline { border-color: var(--line-strong); background: var(--paper); }
+.control.outline:active { background: var(--wash-strong); }
+@media (hover: hover) {
+  .control.outline:hover { background: var(--surface); border-color: #11151147; }
+  .control.outline:active { background: var(--wash-strong); }
+}
+
+.control.primary { background: var(--ink); color: #fff; font-weight: 500; padding: 0 14px; }
+.control.primary:active { background: #000; }
+@media (hover: hover) {
+  .control.primary:hover { background: #2a2d2a; color: #fff; }
+  .control.primary:active { background: #000; color: #fff; }
+}
+
+/* Disabled stays focusable, so that a key press never drops focus. */
+.control[aria-disabled='true'],
+.control[aria-disabled='true']:active { background: transparent; color: var(--faint); cursor: default; }
+@media (hover: hover) {
+  .control[aria-disabled='true']:hover,
+  .control[aria-disabled='true']:active { background: transparent; color: var(--faint); }
+}
+.control.primary[aria-busy='true'],
+.control.primary[aria-busy='true']:active { background: #2a2d2a; color: #ffffffd9; cursor: progress; }
+@media (hover: hover) {
+  .control.primary[aria-busy='true']:hover,
+  .control.primary[aria-busy='true']:active { background: #2a2d2a; color: #ffffffd9; }
+}
+
+/* The demo has one boundary. Anything inside it uses hairlines. */
+.stage {
+  position: relative; overflow: hidden; isolation: isolate;
+  width: 100%; height: var(--stage-height, 620px);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-outer);
+  background: var(--surface); container-type: inline-size;
+}
+.float {
+  background: var(--paper); border: 1px solid var(--line-strong);
+  border-radius: 10px; box-shadow: var(--float-shadow);
+}
+.divider { flex: none; align-self: stretch; width: 1px; margin: 6px 3px; background: var(--line); }
+
+/* The reading column under the stage */
+.reading { max-width: var(--reading-width); margin: 72px 0 0; scroll-margin-top: 32px; }
+.reading h2 { margin: 0 0 12px; font: 400 26px/32px var(--serif); letter-spacing: -0.02em; }
+.reading h3 { margin: 44px 0 10px; font: 500 13px/20px var(--sans); color: var(--ink); }
+.prose { margin: 0 0 12px; font: 400 17px/27px var(--serif); color: var(--body); letter-spacing: -0.005em; }
+.results { margin: 0; border-top: 1px solid var(--line); }
+.results > div {
+  display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); column-gap: 20px;
+  padding: 12px 0; border-bottom: 1px solid var(--line);
+}
+.results dt { font-size: 14px; line-height: 22px; color: var(--muted); }
+.results dd { margin: 0; font-size: 14px; line-height: 22px; color: var(--body); }
+.results b { display: block; font-weight: 500; color: var(--ink); }
+.limits { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.limits li { padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 22px; color: var(--body); }
+.page-end {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+  max-width: var(--reading-width); margin: 56px 0 0; padding: 0 0 40px;
+}
+.page-end .quiet:last-child { margin-right: -8px; }
+@media (max-width: 559px) {
+  .results > div { grid-template-columns: minmax(0, 1fr); row-gap: 2px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
