@@ -36,5 +36,4 @@ python3 scripts/plot.py shift results/update_final wiki_ts results/plots/shift_p
   --labels adaptive fixed alex btree
 python3 scripts/plot.py shift results/update_final osm results/plots/shift_hostile.svg \
   --labels adaptive fixed alex btree
-python3 scripts/build_site_data.py
 python3 scripts/artifact_manifest.py > /dev/null
