@@ -139,7 +139,6 @@ A key is in the base or the buffer, never both. So a read that hits the base nev
 | [docs/REPORT.md](docs/REPORT.md) | The measured results and what they mean. |
 | [docs/API.md](docs/API.md) | The exact behaviour of every operation. |
 | [docs/RESEARCH.md](docs/RESEARCH.md) | Sources, derivations, and every failed experiment. |
-| [docs/CHECKPOINT.md](docs/CHECKPOINT.md) | What passed, what failed, and the next command. |
 | [data/README.md](data/README.md) | Where the datasets come from. |
 
 ## Credits

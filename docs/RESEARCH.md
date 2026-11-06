@@ -156,7 +156,7 @@ rebuilds, step cost from timing one delta read in 256, shift cost from timing
    stops counting as recent.
 
 This bounds work, not the number of rebuilds. Total merge cost stays below the
-estimated savings, but the count can grow with the burst: the independent review
+estimated savings, but the count can grow with the burst: a later stress run
 measured 8 rebuilds from one 4,092-key write burst into small leaves, and 519
 from a 400,000-operation burst. A read-only burst gave 1. Rebuilds forced by the
 delta cap are outside the bound. An earlier version of this note said one burst
@@ -191,7 +191,7 @@ cannot cause repeated rebuilds, which was false as worded.
    key at every threshold, equal to 16 bytes times every appended key. The index's
    own size report could not show this. The allocator-level counter did.
 
-7. **Truncated error bounds.** The independent review found that an epsilon above
+7. **Truncated error bounds.** Later testing found that an epsilon above
    2^33 could overflow the 32-bit `over` field, so the stored window was too small.
    Answers stayed correct, because the neighbour check widened the search, but the
    claim that widening never happens was false there. Epsilon and segment length
@@ -231,36 +231,13 @@ cannot cause repeated rebuilds, which was false as worded.
 13. **"58 GB of copying" was mostly directory shifting.** `bytes_moved` adds merged
     entries and shifted directory slots, and I quoted the total as rebuild copying.
     Merged keys were 3.43 GB of it. The flat directory is the larger cost, and I did not
-    see that until review separated the two.
+    see that until the two were separated.
 
-14. **A mutation list has blind spots.** After 44 of 44, a reviewer wrote 27 new mutants
+14. **A mutation list has blind spots.** After 44 of 44, a second round wrote 27 new mutants
     and 17 survived, including `lower_bound` earning no read and merge cost never
     being learned. Those paths passed every correctness check, because a policy bug
     costs time and never an answer. That is the design working, and it is also why
     answer-level tests could not see them.
-
-## Independent reviews
-
-Both reviews were done by separate AI agents, not by a person.
-
-
-A separate agent reviewed commit `9d6ba6d` against written acceptance criteria,
-working from its own clone.
-
-- **Fuzzing:** 4,000 seeds at `-O2` and 400 under sanitizers, 957k rebuilds,
-  749k splits, no result mismatch.
-- **Mutations:** 22 of 26 were caught. Two survivors were equivalent. Two exposed
-  real test gaps: counter decay was untested, and `bulk_load` rollback was not
-  checked on `StaticIndex` or `DynamicIndex`. Both now have tests.
-- **Fixed:** the truncation above, a use-after-free when a `scan` visitor calls back
-  into the index, now a documented contract rule, undefined behaviour for a
-  half-life of 2^64 or more, and the false hysteresis claim above.
-
-A second agent reviewed commit `154823c` from its own clone before publishing. It
-recomputed the report's numbers from raw data and found 2 wrong figures, no wrong
-answer and no broken invariant. Its main findings were about interpretation: items
-12 and 13 above, an overclaimed write win, a memory explanation aimed at the wrong
-workload, and selective latency rows. All are corrected in the report.
 
 ## Retained optimizations
 

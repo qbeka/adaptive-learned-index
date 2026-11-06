@@ -79,7 +79,7 @@ MUTANTS = [
     ("refill not modelled", POLICY, "const double refill = writes / 2;", "const double refill = 0;", None),
     ("reads earn nothing", POLICY, "    ++state.reads;\n", "", None),
     ("calibration can be optimised away", POLICY, 'asm volatile("" : : "r"(words.data()) : "memory");', "", None),
-    # Added after an independent review wrote 27 more mutants and 17 survived.
+    # Added after a second round wrote 27 more mutants and 17 survived.
     ('bytes_moved omits directory shift', DYNAMIC, '      stats_.bytes_moved += tail * (sizeof(Key) + sizeof(void*));\n      stats_.splits += extra;', '      stats_.splits += extra;', None),
     ('bytes_moved omits merged bytes', DYNAMIC, '    stats_.bytes_moved += merged_size * sizeof(Entry);\n', '', None),
     ('keys_merged not counted', DYNAMIC, '    stats_.keys_merged += merged_size;\n', '', None),

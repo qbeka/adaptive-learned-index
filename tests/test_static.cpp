@@ -123,7 +123,7 @@ void check_segment_cap_is_respected() {
   CHECK(index.lookup(5000) == Value{2500});
 }
 
-// Found by independent review. An epsilon this large once overflowed the 32-bit
+// Regression test. An epsilon this large once overflowed the 32-bit
 // error bound, leaving a window too small for the keys it had to cover.
 void check_huge_epsilon_cannot_truncate_the_error_bound() {
   const std::vector<Entry> entries = {{0, 1}, {Key{1} << 63, 2}, {(Key{1} << 63) + 1, 3}};

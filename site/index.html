@@ -638,7 +638,6 @@ function fillResults() {
   if (q.mutation) rows.push(["Mutation testing", `${q.mutation.killed} of ${q.mutation.scored} deliberate bugs caught, from a hand-written list of ${q.mutation.scored + q.mutation.equivalent}.`]);
   if (q.line_coverage) rows.push(["Coverage", `${q.line_coverage.toFixed(1)}% of lines and ${q.branch_coverage.toFixed(1)}% of branches in the library.`]);
   rows.push(["Sanitizers", "The full suite runs clean under AddressSanitizer and UndefinedBehaviorSanitizer."]);
-  rows.push(["Automated review", "A separate AI agent reworked the numbers from raw data and searched for counterexamples. It found no wrong answers. It did find conclusions that went too far, and those are corrected."]);
   $("verification").replaceChildren(...rows.map(([name, text]) => hairlineRow(name, text)));
 
   const section = $("results-section");

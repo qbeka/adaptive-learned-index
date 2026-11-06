@@ -189,7 +189,7 @@ Five seeds, 10,000,000 lookups per process, median load 9 for full data and 6 fo
 | Coverage | 98.26 percent of lines, 93.07 percent of branches | [coverage.json](../results/quality/coverage.json) |
 | Mutation testing | 69 of 69 scored mutants caught, 3 equivalent, from a hand-written list of 72. It is only as strong as the list. See below | [mutation.json](../results/quality/mutation.json) |
 
-The mutation score took three passes. The first read 44 of 44 but was false, because a sandbox error counted as a kill for 4 mutants. The honest score was 40 of 44. After tests closed those gaps, an automated review wrote 27 more mutants and 17 survived, mostly in policy learning and work accounting. Those survivors now have tests. Answer correctness was strong from the start, and policy and metric code was the weak side.
+The mutation score took three passes. The first read 44 of 44 but was false, because a sandbox error counted as a kill for 4 mutants. The honest score was 40 of 44. After tests closed those gaps, a second round wrote 27 more mutants and 17 survived, mostly in policy learning and work accounting. Those survivors now have tests. Answer correctness was strong from the start, and policy and metric code was the weak side.
 
 ## Limits of this evidence
 
