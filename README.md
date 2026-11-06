@@ -48,6 +48,7 @@ It runs the correctness suite, replays a trace against the oracle, and compares 
 | Summarise a run | `scripts/analyze.py results/NAME --reference LABEL` |
 | Rerun all final benchmarks | `scripts/run_full_benchmark.sh` |
 | Open the demo | Open `site/index.html` in a browser, or see the [live replay](https://www.qendrimbeka.com/projects/adaptive-learned-index/index.html). |
+| Build the demo as one file | `scripts/bundle_site.py` |
 
 Experiments resume if interrupted, and they wait for the machine to go quiet before each measurement. [results/ARTIFACTS.md](results/ARTIFACTS.md) lists every recorded run.
 
@@ -147,4 +148,4 @@ The ideas this builds on come from Kraska et al. (learned indexes), Ferragina an
 
 ## License
 
-[MIT](LICENSE), except `site/fonts/`. Geist Serif is under the SIL Open Font License, included as `site/fonts/GeistSerif-OFL.txt`.
+[MIT](LICENSE), except `site/fonts/`. Geist and Geist Serif are under the SIL Open Font License, included as `site/fonts/LICENSE-GEIST.txt` and `site/fonts/GeistSerif-OFL.txt`.
