@@ -439,8 +439,10 @@
     setText(caption, frame.caption);
     setText(opNode, fmt(frame.op));
     renderMeter(frame);
+    // The opening frame belongs to Predict, so a chapter is marked before Play.
+    const current = frame.chapter < 0 ? CHAPTER.PREDICT : frame.chapter;
     chapterButtons.forEach((button, index) => {
-      const pressed = String(index === frame.chapter);
+      const pressed = String(index === current);
       if (button.getAttribute("aria-pressed") !== pressed) button.setAttribute("aria-pressed", pressed);
     });
     time.setAttribute("aria-valuetext", frame.caption);
