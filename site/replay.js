@@ -224,14 +224,19 @@
     const bufferBars = clamp(Math.round(height * 0.17), 28, 72);
     const bufferBase = height - 10;
     const bufferTitle = bufferBase - bufferBars - 22;
-    const base = bufferTitle - 30;
+    // Until the first insert the buffer has nothing to show, so the leaf takes its room.
+    const baseOpen = bufferTitle - 30;
+    const baseClosed = height - 34;
     const top = 26;
     box = {
-      width, height, pad, inner, top, base, bufferBase, bufferBars, bufferTitle,
-      slot: inner / BUFFER_SLOTS,
+      width, height, pad, inner, top, base: baseOpen, baseOpen, baseClosed, bufferBase, bufferBars, bufferTitle,
+      slot: inner / baseKeys.length,
+      bufferSlot: inner / BUFFER_SLOTS,
       mergedSlot: inner / (keys.length + GAP),
     };
   }
+
+  const bufferShown = (frame) => Boolean(frame.merged) || frame.chapter >= CHAPTER.INSERT;
 
   const barTop = (item) => box.base - (0.06 + 0.94 * item.y) * (box.base - box.top);
   const queryY = () => Math.round(barTop(queryItem));
@@ -274,6 +279,8 @@
   }
 
   function renderScene(frame) {
+    const shown = bufferShown(frame);
+    box.base = shown ? box.baseOpen : box.baseClosed;
     const { pad, inner, base, top, bufferBase, bufferBars, bufferTitle } = box;
     const merged = Boolean(frame.merged);
     const size = merged ? box.mergedSlot : box.slot;
@@ -285,7 +292,7 @@
     const buffered = frame.buffered || 0;
 
     for (const item of keys) {
-      let x, y, height, opacity = 1;
+      let x, y, height, opacity = 1, width = barWidth(size);
       if (merged) {
         x = left(mergedSlot(item.merged));
         y = barTop(item);
@@ -298,11 +305,11 @@
         const here = rank.has(item);
         const slot = here ? rank.get(item) : arrived.filter((other) => other.key < item.key).length;
         height = here ? 4 + item.y * (bufferBars - 4) : 0;
-        x = left(slot);
+        x = pad + slot * box.bufferSlot;
+        width = barWidth(box.bufferSlot);
         y = bufferBase - height;
         opacity = here ? 1 : 0;
       }
-      const width = barWidth(size);
       put(item.node, `translate(${x.toFixed(2)}px,${y.toFixed(2)}px) scale(${width.toFixed(2)},${height.toFixed(2)})`, opacity);
       const tone = toneOf(item, frame);
       if (item.node.dataset.tone !== tone) item.node.dataset.tone = tone;
@@ -363,14 +370,15 @@
       }
     }
 
-    put(bufferTag, `translate(${pad}px,${bufferTitle}px)`, 1);
-    put(ruleBuffer, `translate(${pad}px,${bufferBase}px) scale(${inner},1)`, 1);
+    const bufferOpacity = shown ? 1 : 0;
+    put(bufferTag, `translate(${pad}px,${bufferTitle}px)`, bufferOpacity);
+    put(ruleBuffer, `translate(${pad}px,${bufferBase}px) scale(${inner},1)`, bufferOpacity);
     const written = frame.written || 0;
     let count = "Empty";
     if (merged) count = `Empty after merging ${R.rebuild.delta_keys} keys`;
     else if (written > 0) count = `${buffered} ${buffered === 1 ? "key" : "keys"}, insert ${written} of ${R.inserts.length}${frame.repeat && box.width >= 600 ? " rewrites a buffered key" : ""}`;
     setText(bufferCount, count);
-    put(bufferCount, `translate(-${pad}px,${bufferTitle}px)`, 1);
+    put(bufferCount, `translate(-${pad}px,${bufferTitle}px)`, bufferOpacity);
   }
 
   /* The words and controls */
