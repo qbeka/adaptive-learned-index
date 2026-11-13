@@ -13,7 +13,7 @@
 .title { grid-template-columns: minmax(0, 1fr); }
 .title h1 { font-size: clamp(27px, calc((100vw - 32px) / 10.3), 40px); line-height: 1.1; }
 
-.stage { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+.stage { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
 
 /* Step switch and what is being shown */
 .head { display: flex; align-items: center; gap: 12px; padding: 8px 16px 0 8px; }
@@ -142,10 +142,11 @@
 @container (max-width: 639px) {
   /* Labels share the query line on a phone, so they stay small enough not to collide. */
   .tag { font-size: 12px; line-height: 16px; }
-  .head { display: block; padding: 6px 8px 0; }
-  .chapters { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; }
-  .chapters .control { padding: 0; }
-  .source { margin: 2px 0 0 4px; }
+  .head { display: block; padding: 6px 4px 0; }
+  /* Each step keeps its own width at 14 px, and the spare room goes between them. */
+  .chapters { flex-wrap: wrap; justify-content: space-between; gap: 0; }
+  .chapters .control { padding: 0 4px; }
+  .source { margin: 2px 0 0 8px; }
   .telling { height: 84px; }
   .foot { padding: 10px 12px; }
   .caption { font-size: 15px; line-height: 21px; }
