@@ -310,7 +310,7 @@
 
     const lineY = queryY();
     put(queryLine, `translate(${pad}px,${lineY}px) scaleX(${inner})`, 1);
-    put(queryTag, `translate(${pad}px,${lineY - 19}px)`, 1);
+    put(queryTag, `translate(${pad}px,${lineY - 21}px)`, 1);
 
     // Window: one band and one rail that narrow, and later jump to the new leaf.
     if (frame.window) {
@@ -350,7 +350,7 @@
       put(headLine, `translate(${x.toFixed(2)}px,${lineY}px) scaleY(${base - lineY})`, 1);
       setText(headTag, frame.label);
       const half = headTag.offsetWidth / 2;
-      put(headTag, `translate(${clamp(x - half, pad, pad + inner - half * 2).toFixed(2)}px,${lineY - 19}px)`, 1);
+      put(headTag, `translate(${clamp(x - half, pad, pad + inner - half * 2).toFixed(2)}px,${lineY - 21}px)`, 1);
       const ringX = merged ? left(frame.ring + GAP) : left(frame.ring);
       put(ring, `translate(${(ringX - 4.5).toFixed(2)}px,${(lineY - 4).toFixed(2)}px)`, 1);
       const from = Math.min(ringX, x);

@@ -21,7 +21,7 @@
 /* Holds each label at its selected weight, so the row never shifts. */
 .chapters .control { flex-direction: column; }
 .chapters .control::after { content: attr(data-label); height: 0; overflow: hidden; visibility: hidden; font-weight: 500; }
-.source { margin: 0 0 0 auto; color: var(--muted); font-size: 13px; line-height: 16px; white-space: nowrap; }
+.source { margin: 0 0 0 auto; color: var(--muted); font-size: 14px; line-height: 18px; white-space: nowrap; }
 
 /* The scene: one set of objects, placed by transform */
 .scene { position: relative; min-height: 0; overflow: hidden; --move: .36s; }
@@ -60,7 +60,7 @@
   transition: transform var(--move) cubic-bezier(.22, .8, .24, 1), opacity .16s;
 }
 .tag {
-  font-size: 12px; line-height: 16px; color: var(--muted); white-space: nowrap; pointer-events: none;
+  font-size: 14px; line-height: 18px; color: var(--muted); white-space: nowrap; pointer-events: none;
   transition: transform var(--move) cubic-bezier(.22, .8, .24, 1), opacity .16s;
 }
 .tag.query, .tag.active, .tag.count { color: var(--forest); }
@@ -73,9 +73,9 @@
 /* A fixed height, so that the scene above never changes size between steps. */
 .telling { position: relative; display: grid; align-content: center; height: 48px; }
 .caption { margin: 0; font: 400 17px/24px var(--serif); letter-spacing: -0.005em; color: var(--ink); }
-.meter { position: absolute; top: 50%; right: 0; width: 336px; transform: translateY(-50%); display: grid; row-gap: 4px; opacity: 0; visibility: hidden; transition: opacity .16s, visibility .16s; }
+.meter { position: absolute; top: 50%; right: 0; width: 360px; transform: translateY(-50%); display: grid; row-gap: 4px; opacity: 0; visibility: hidden; transition: opacity .16s, visibility .16s; }
 .meter.on { opacity: 1; visibility: visible; }
-.meter > div { display: grid; grid-template-columns: 104px minmax(0, 1fr) 64px; column-gap: 10px; align-items: center; font-size: 13px; line-height: 18px; color: var(--muted); }
+.meter > div { display: grid; grid-template-columns: 116px minmax(0, 1fr) 68px; column-gap: 10px; align-items: center; font-size: 14px; line-height: 18px; color: var(--muted); }
 .meter > div > span:last-child { text-align: right; font-weight: 500; color: var(--ink); }
 .meter i { display: block; height: 6px; background: var(--wash); }
 .meter b { display: block; height: 100%; background: var(--bar-window); transform-origin: 0 50%; transform: scaleX(0); transition: transform .5s cubic-bezier(.22, .8, .24, 1); }
@@ -137,13 +137,15 @@
   .telling { row-gap: 4px; height: 66px; align-content: start; }
   .meter { position: static; width: auto; transform: none; }
   .meter:not(.on) { display: none; }
-  .meter > div { grid-template-columns: 96px minmax(0, 1fr) 56px; column-gap: 8px; font-size: 12px; line-height: 16px; }
+  .meter > div { grid-template-columns: 112px minmax(0, 1fr) 64px; column-gap: 8px; }
 }
 @container (max-width: 639px) {
+  /* Labels share the query line on a phone, so they stay small enough not to collide. */
+  .tag { font-size: 12px; line-height: 16px; }
   .head { display: block; padding: 6px 8px 0; }
   .chapters { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; }
-  .chapters .control { padding: 0; font-size: 12px; }
-  .source { margin: 2px 0 0 4px; font-size: 12px; }
+  .chapters .control { padding: 0; }
+  .source { margin: 2px 0 0 4px; }
   .telling { height: 84px; }
   .foot { padding: 10px 12px; }
   .caption { font-size: 15px; line-height: 21px; }
