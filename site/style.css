@@ -12,7 +12,6 @@
 /* Stays on one line down to 320 px. */
 .title { grid-template-columns: minmax(0, 1fr); }
 .title h1 { font-size: clamp(27px, calc((100vw - 32px) / 10.3), 40px); line-height: 1.1; }
-.title p { font-size: clamp(14px, calc((100vw - 32px) / 19.8), 17px); }
 
 .stage { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
 
